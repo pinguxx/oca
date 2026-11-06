@@ -211,59 +211,51 @@
 
             <div class="board-viewport" id="board-viewport">
               <div class="board-camera" id="board-camera">
-                <svg id="oca-board" class="oca-board-svg" viewBox="0 0 1000 890" preserveAspectRatio="xMidYMid meet">
+                <svg id="oca-board" class="oca-board-svg" viewBox="0 0 1000 820" preserveAspectRatio="xMidYMid meet">
                   <defs>
                     <!-- Background Parchment Filters & Gradients -->
-                    <radialGradient id="parchmentBgGrad" cx="50%" cy="50%" r="70%">
-                      <stop offset="0%" stop-color="#fff9ea"/>
-                      <stop offset="65%" stop-color="#f5e8c8"/>
-                      <stop offset="100%" stop-color="#dfcaa0"/>
+                    <radialGradient id="cardstockBgGrad" cx="50%" cy="50%" r="70%">
+                      <stop offset="0%" stop-color="#ffffff"/>
+                      <stop offset="60%" stop-color="#fffef9"/>
+                      <stop offset="100%" stop-color="#fdf6e6"/>
                     </radialGradient>
 
-                    <linearGradient id="gardenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#ffe680"/>
-                      <stop offset="40%" stop-color="#ffb703"/>
+                    <linearGradient id="bannerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#ffd166"/>
+                      <stop offset="50%" stop-color="#ffb703"/>
                       <stop offset="100%" stop-color="#fb8500"/>
                     </linearGradient>
 
-                    <linearGradient id="trackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#ead8b1"/>
-                      <stop offset="50%" stop-color="#d4b982"/>
-                      <stop offset="100%" stop-color="#ead8b1"/>
+                    <linearGradient id="indicacionesGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stop-color="#fffbf0"/>
+                      <stop offset="100%" stop-color="#fef3d6"/>
                     </linearGradient>
 
-                    <filter id="tileDropShadow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feDropShadow dx="1" dy="4" stdDeviation="3" flood-color="#3d2b1f" flood-opacity="0.3"/>
-                    </filter>
-
-                    <filter id="medallionGlow" x="-30%" y="-30%" width="160%" height="160%">
-                      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#ffb703" flood-opacity="0.6"/>
+                    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+                      <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.2"/>
                     </filter>
                   </defs>
 
-                  <!-- Board Parchment Background -->
-                  <rect width="1000" height="890" rx="30" fill="url(#parchmentBgGrad)"/>
+                  <!-- Cardstock Base Background -->
+                  <rect width="1000" height="820" fill="url(#cardstockBgGrad)"/>
 
-                  <!-- Decorative Antique Compass Rose / Filigree Background -->
-                  <g id="svg-bg-decor" class="svg-bg-decor" opacity="0.38"></g>
+                  <!-- Outer Decorative Double Border -->
+                  <rect x="12" y="10" width="976" height="800" rx="6" fill="none" stroke="#9e2a2b" stroke-width="8"/>
+                  <rect x="22" y="20" width="956" height="780" rx="4" fill="none" stroke="#d4af37" stroke-width="2.5"/>
 
-                  <!-- Track background connecting line -->
-                  <path id="board-spiral-path" class="board-spiral-path" d="" fill="none"/>
+                  <!-- 4 Ornate Mexican Rosettes in the corners -->
+                  <g id="svg-corner-rosettes"></g>
 
-                  <!-- Outer Track Boundary Rails -->
-                  <path id="board-rail-outer" class="board-rail-outer" d="" fill="none"/>
-                  <path id="board-rail-inner" class="board-rail-inner" d="" fill="none"/>
-
-                  <!-- Tiles container rendered by JS -->
+                  <!-- Tiles (1..=62) matching Montecarlo cards -->
                   <g id="svg-tiles-group"></g>
 
-                  <!-- Special Illustrative Vignettes overlay -->
-                  <g id="svg-vignettes-group"></g>
+                  <!-- Center "INDICACIONES" Vintage Rules Card -->
+                  <g id="svg-indicaciones-group"></g>
 
-                  <!-- Central Garden Medallion Decor -->
+                  <!-- Central Tile 63 (Gran Oca & Banner) -->
                   <g id="svg-garden-group"></g>
 
-                  <!-- Player Tokens container rendered by JS -->
+                  <!-- Player Tokens -->
                   <g id="svg-tokens-group"></g>
                 </svg>
               </div>

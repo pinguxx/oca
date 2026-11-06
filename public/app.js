@@ -1,6 +1,6 @@
 // ========================================================
-// 🦆 EL JUEGO DE LA OCA - CLIENTE INTERACTIVO
-// Tablero Espiral Caracol, Cámara Dinámica (Zoom) y WebSockets
+// 🦆 EL JUEGO DE LA OCA - CLIENTE INTERACTIVO MONTECARLO
+// Tablero Tradicional Ilustrado con Cartas, Rosetas & Cámara Fija
 // ========================================================
 
 class OcaGameApp {
@@ -17,12 +17,12 @@ class OcaGameApp {
         this.selectedAvatar = '🪿';
         this.selectedColor = '#e63946';
 
-        // Camera & Pan/Zoom
+        // Camera & Pan/Zoom (Cámara Fija por defecto para evitar mareos)
         this.camera = {
             x: 0,
             y: 0,
             scale: 1.0,
-            isZoomed: false,
+            isZoomed: false, // Default: FALSE (Vista fija completa)
             isDragging: false,
             startX: 0,
             startY: 0,
@@ -30,7 +30,6 @@ class OcaGameApp {
             camStartY: 0,
             pinchDist: 0,
             pinchScale: 1.0,
-            targetTile: 0,
         };
 
         // Audio
@@ -50,7 +49,7 @@ class OcaGameApp {
         this.setupCameraGestures();
         this.setupConfetti();
         await this.loadBoardData();
-        this.renderBoardSVG();
+        this.renderMontecarloBoard();
 
         // Check URL parameters for direct room join (e.g. ?room=OC24)
         const urlParams = new URLSearchParams(window.location.search);
@@ -64,7 +63,7 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 1. BOARD DATA & SVG RENDERING (NAUTILUS SPIRAL)
+    // 1. BOARD DATA & MONTECARLO VINTAGE RENDERING
     // ========================================================
     async loadBoardData() {
         try {
@@ -81,26 +80,17 @@ class OcaGameApp {
             this.boardDef = this.generateFallbackBoard();
         }
 
-        // Precompute pixel coordinates on 1000x890 SVG viewport
+        // Map coordinates for 1000x820 SVG viewport
         this.boardCoords = this.boardDef.map(tile => {
             const x = (tile.x_pct / 100.0) * 1000;
-            const y = (tile.y_pct / 100.0) * 890;
-            const angle = tile.angle_deg || 0;
-            return { x, y, angle, tile };
+            const y = (tile.y_pct / 100.0) * 820;
+            return { x, y, tile };
         });
     }
 
     generateFallbackBoard() {
         const tiles = [];
-        tiles.push({
-            number: 0,
-            tile_type: 'normal',
-            name: 'Salida',
-            x_pct: 6.5,
-            y_pct: 58.4,
-            angle_deg: 275
-        });
-
+        tiles.push({ number: 0, tile_type: 'normal', name: 'Salida', x_pct: 3.8, y_pct: 91.5 });
         for (let i = 1; i <= 63; i++) {
             let t = 'normal';
             if ([5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59].includes(i)) t = 'oca';
@@ -113,268 +103,341 @@ class OcaGameApp {
             else if (i === 58) t = 'muerte';
             else if (i === 63) t = 'meta';
 
-            tiles.push({
-                number: i,
-                tile_type: t,
-                name: `Casilla ${i}`,
-                x_pct: 50,
-                y_pct: 50,
-                angle_deg: 0
-            });
+            tiles.push({ number: i, tile_type: t, name: `Casilla ${i}`, x_pct: 50, y_pct: 50 });
         }
         return tiles;
     }
 
-    renderBoardSVG() {
-        const bgDecor = document.getElementById('svg-bg-decor');
-        const tilesGroup = document.getElementById('svg-tiles-group');
-        const vignettesGroup = document.getElementById('svg-vignettes-group');
-        const gardenGroup = document.getElementById('svg-garden-group');
-        const spiralPath = document.getElementById('board-spiral-path');
-        const railOuter = document.getElementById('board-rail-outer');
-        const railInner = document.getElementById('board-rail-inner');
-
-        if (!tilesGroup || this.boardCoords.length === 0) return;
-
-        tilesGroup.innerHTML = '';
-        vignettesGroup.innerHTML = '';
-        gardenGroup.innerHTML = '';
-        bgDecor.innerHTML = '';
-
-        // 1. Antique Parchment Compass Rose & Corner Flourishes
-        bgDecor.innerHTML = `
-            <!-- Vintage Nautical Compass Rose -->
-            <g transform="translate(500, 445)">
-                <circle r="360" fill="none" stroke="#8d5b28" stroke-width="1.5" stroke-dasharray="3,3"/>
-                <circle r="260" fill="none" stroke="#8d5b28" stroke-width="1" stroke-dasharray="2,4"/>
-                <circle r="160" fill="none" stroke="#8d5b28" stroke-width="0.8"/>
-                
-                <!-- Compass Points -->
-                <polygon points="0,-360 12,-160 0,-180 -12,-160" fill="#a0522d"/>
-                <polygon points="0,360 12,160 0,180 -12,160" fill="#a0522d"/>
-                <polygon points="360,0 160,12 180,0 160,-12" fill="#a0522d"/>
-                <polygon points="-360,0 -160,12 -180,0 -160,-12" fill="#a0522d"/>
-
-                <text y="-370" text-anchor="middle" font-family="'Playfair Display', serif" font-size="20" font-weight="bold" fill="#7f4f24">N</text>
-                <text y="390" text-anchor="middle" font-family="'Playfair Display', serif" font-size="20" font-weight="bold" fill="#7f4f24">S</text>
-                <text x="385" y="7" text-anchor="middle" font-family="'Playfair Display', serif" font-size="20" font-weight="bold" fill="#7f4f24">E</text>
-                <text x="-385" y="7" text-anchor="middle" font-family="'Playfair Display', serif" font-size="20" font-weight="bold" fill="#7f4f24">O</text>
-            </g>
-
-            <!-- Corner Vintage Vignettes -->
-            <g transform="translate(60, 60)">
-                <path d="M0,0 Q60,10 100,50 Q10,60 0,0" fill="none" stroke="#936639" stroke-width="2"/>
-                <text x="20" y="30" font-size="16">🪿</text>
-            </g>
-            <g transform="translate(940, 60) scale(-1, 1)">
-                <path d="M0,0 Q60,10 100,50 Q10,60 0,0" fill="none" stroke="#936639" stroke-width="2"/>
-            </g>
-            <g transform="translate(940, 830) scale(-1, -1)">
-                <path d="M0,0 Q60,10 100,50 Q10,60 0,0" fill="none" stroke="#936639" stroke-width="2"/>
-            </g>
-            <g transform="translate(60, 830) scale(1, -1)">
-                <path d="M0,0 Q60,10 100,50 Q10,60 0,0" fill="none" stroke="#936639" stroke-width="2"/>
-            </g>
-        `;
-
-        // 2. Generate smooth continuous curve through tile centers
-        let pathD = `M ${this.boardCoords[1].x} ${this.boardCoords[1].y}`;
-        for (let i = 2; i < this.boardCoords.length - 1; i++) {
-            pathD += ` L ${this.boardCoords[i].x} ${this.boardCoords[i].y}`;
-        }
-        spiralPath.setAttribute('d', pathD);
-
-        // 3. Render Each Tile (1..=62) rotated along tangent
-        this.boardCoords.forEach(({ x, y, angle, tile }) => {
-            if (tile.number === 0) {
-                // Starting Nest
-                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                g.setAttribute('transform', `translate(${x}, ${y})`);
-                g.innerHTML = `
-                    <circle r="36" fill="#8d5b28" stroke="#ffb703" stroke-width="3" filter="url(#tileDropShadow)"/>
-                    <circle r="30" fill="#f4ebd0" stroke="#a07844" stroke-width="1.5" stroke-dasharray="4,2"/>
-                    <text y="-10" text-anchor="middle" font-size="11" font-weight="900" fill="#582f0e">SALIDA</text>
-                    <text y="14" text-anchor="middle" font-size="24">🪺</text>
-                `;
-                tilesGroup.appendChild(g);
-                return;
-            }
-
-            if (tile.number === 63) {
-                // Grand Golden Center Garden Medallion
-                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                g.setAttribute('transform', `translate(${x}, ${y})`);
-                g.innerHTML = `
-                    <!-- Center Grand Garden Medallion -->
-                    <circle r="78" fill="url(#gardenGrad)" stroke="#582f0e" stroke-width="5" filter="url(#medallionGlow)"/>
-                    <circle r="68" fill="#fefae0" stroke="#d4a373" stroke-width="2"/>
-                    <circle r="62" fill="#90e0ef" opacity="0.35"/>
-                    <circle r="60" fill="none" stroke="#ffb703" stroke-width="2" stroke-dasharray="6,4"/>
-
-                    <text y="-38" text-anchor="middle" font-family="'Playfair Display', serif" font-size="18" fill="#7f4f24" font-weight="900" letter-spacing="1">META 63</text>
-                    
-                    <!-- Majestic Crowned Goose Artwork -->
-                    <g transform="translate(0, 2)">
-                        <text y="-2" text-anchor="middle" font-size="20">👑</text>
-                        <text y="24" text-anchor="middle" font-size="46">🦆</text>
-                        <text y="38" text-anchor="middle" font-size="14">🪷</text>
-                    </g>
-
-                    <text y="52" text-anchor="middle" font-family="'Playfair Display', serif" font-size="12" fill="#582f0e" font-weight="900" letter-spacing="0.5">JARDÍN DE LA OCA</text>
-                `;
-                gardenGroup.appendChild(g);
-                return;
-            }
-
-            // Normal and Special Tiles (1..=62)
-            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('class', `svg-tile-item tile-${tile.tile_type}`);
-            g.setAttribute('data-tile', tile.number);
-
-            let fillColor = '#fffdf7';
-            let strokeColor = '#8a5a36';
-            let strokeWidth = '1.8';
-            let iconDrawing = '';
-
-            switch (tile.tile_type) {
-                case 'oca':
-                    fillColor = '#e9f5ed';
-                    strokeColor = '#2a9d8f';
-                    strokeWidth = '2.5';
-                    iconDrawing = this.createGooseArtwork();
-                    break;
-                case 'puente':
-                    fillColor = '#e8f4f8';
-                    strokeColor = '#457b9d';
-                    strokeWidth = '2.5';
-                    iconDrawing = this.createBridgeArtwork();
-                    break;
-                case 'dados':
-                    fillColor = '#f3e8ff';
-                    strokeColor = '#9b5de5';
-                    strokeWidth = '2.5';
-                    iconDrawing = this.createDiceArtwork();
-                    break;
-                case 'posada':
-                    fillColor = '#fff1e6';
-                    strokeColor = '#e76f51';
-                    strokeWidth = '2.5';
-                    iconDrawing = this.createInnArtwork();
-                    break;
-                case 'pozo':
-                    fillColor = '#eef3ef';
-                    strokeColor = '#52796f';
-                    strokeWidth = '2.5';
-                    iconDrawing = this.createWellArtwork();
-                    break;
-                case 'laberinto':
-                    fillColor = '#e3fafc';
-                    strokeColor = '#0077b6';
-                    strokeWidth = '2.5';
-                    iconDrawing = this.createMazeArtwork();
-                    break;
-                case 'carcel':
-                    fillColor = '#ede9fe';
-                    strokeColor = '#4a4e69';
-                    strokeWidth = '2.5';
-                    iconDrawing = this.createPrisonArtwork();
-                    break;
-                case 'muerte':
-                    fillColor = '#ffe3e3';
-                    strokeColor = '#c1121f';
-                    strokeWidth = '3';
-                    iconDrawing = this.createSkullArtwork();
-                    break;
-            }
-
-            // Rotate tile to follow track contour
-            const rot = angle;
-
-            g.innerHTML = `
-                <g transform="translate(${x}, ${y}) rotate(${rot})">
-                    <!-- Tile Capsule / Stepping Stone -->
-                    <rect class="svg-tile-capsule" x="-33" y="-23" width="66" height="46" rx="9" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>
-                    
-                    <!-- Number Badge -->
-                    <rect x="-31" y="-21" width="22" height="15" rx="5" fill="#f2e2be" stroke="${strokeColor}" stroke-width="0.8"/>
-                    <text class="svg-tile-text-num" x="-20" y="-13">${tile.number}</text>
-
-                    <!-- Icon or Artwork -->
-                    <g transform="translate(6, 0)">
-                        ${iconDrawing}
-                    </g>
-                </g>
-            `;
-
-            tilesGroup.appendChild(g);
-        });
-
+    renderMontecarloBoard() {
+        this.renderCornerRosettes();
+        this.renderIndicacionesCard();
+        this.renderTilesCards();
+        this.renderGranOcaGarden();
         this.renderPlayerTokens();
     }
 
-    // ========================================================
-    // SVG ARTWORK HELPERS FOR SPECIAL TILES
-    // ========================================================
-    createGooseArtwork() {
-        return `
-            <circle r="13" fill="#2a9d8f" opacity="0.18"/>
-            <text y="4" text-anchor="middle" font-size="18">🦆</text>
-        `;
+    // 4 Mexican Folk Rosettes in the corners
+    renderCornerRosettes() {
+        const group = document.getElementById('svg-corner-rosettes');
+        if (!group) return;
+        group.innerHTML = '';
+
+        const corners = [
+            { x: 50, y: 46 },
+            { x: 950, y: 46 },
+            { x: 950, y: 774 },
+            { x: 50, y: 774 }
+        ];
+
+        corners.forEach(({ x, y }) => {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('transform', `translate(${x}, ${y})`);
+            g.innerHTML = `
+                <!-- Outer Gold Petals -->
+                <circle r="36" fill="#851e1e" stroke="#d4af37" stroke-width="2.5"/>
+                <circle r="30" fill="#2a9d8f" stroke="#fff" stroke-width="1.5"/>
+                <circle r="22" fill="#ffd166" stroke="#851e1e" stroke-width="1.5"/>
+                <circle r="12" fill="#9e2a2b"/>
+                <circle r="5" fill="#ffffff"/>
+                <!-- Star Points -->
+                <polygon points="0,-28 7,-16 0,-19 -7,-16" fill="#ffffff"/>
+                <polygon points="0,28 7,16 0,19 -7,16" fill="#ffffff"/>
+                <polygon points="28,0 16,7 19,0 16,-7" fill="#ffffff"/>
+                <polygon points="-28,0 -16,7 -19,0 -16,-7" fill="#ffffff"/>
+            `;
+            group.appendChild(g);
+        });
     }
 
-    createBridgeArtwork() {
-        return `
-            <circle r="13" fill="#457b9d" opacity="0.18"/>
-            <text y="4" text-anchor="middle" font-size="18">🌉</text>
+    // Central "INDICACIONES" Card (Classic Rules Scroll)
+    renderIndicacionesCard() {
+        const group = document.getElementById('svg-indicaciones-group');
+        if (!group) return;
+        group.innerHTML = '';
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', 'translate(435, 172)');
+
+        g.innerHTML = `
+            <!-- Vintage Card Background -->
+            <rect x="0" y="0" width="230" height="475" rx="6" fill="url(#indicacionesGrad)" stroke="#1a1a1a" stroke-width="2" filter="url(#cardShadow)"/>
+            <rect x="5" y="5" width="220" height="465" rx="4" fill="none" stroke="#851e1e" stroke-width="1.5"/>
+
+            <!-- Decorative Header Stars -->
+            <text x="18" y="32" font-size="14" fill="#d90429">★</text>
+            <text x="115" y="34" class="svg-indicaciones-title">INDICACIONES</text>
+            <text x="212" y="32" font-size="14" fill="#d90429">★</text>
+
+            <line x1="20" y1="44" x2="210" y2="44" stroke="#851e1e" stroke-width="1.5"/>
+
+            <!-- Classic Rules Text from Montecarlo Board -->
+            <g transform="translate(14, 60)" font-family="'Outfit', sans-serif" font-size="8.8" fill="#2b2b2b">
+                <text y="0" font-weight="bold" fill="#851e1e">TIRO INICIAL DEL 9:</text>
+                <text y="13">Si salen 5 y 4, vuela a la No. 53.</text>
+                <text y="25">Si salen 6 y 3, vuela a la No. 26.</text>
+                
+                <text y="48" font-weight="bold" fill="#2a9d8f">🦆 LAS OCAS:</text>
+                <text y="61">De oca a oca y tiro porque me toca.</text>
+                <text y="73">Avanza a la siguiente y repite tiro.</text>
+
+                <text y="96" font-weight="bold" fill="#457b9d">🌉 EL PUENTE (6 y 12):</text>
+                <text y="109">De puente a puente y tiro porque me</text>
+                <text y="121">lleva la corriente. Salta y repite.</text>
+
+                <text y="144" font-weight="bold" fill="#e76f51">🏨 LA POSADA (No. 19):</text>
+                <text y="157">Cansado del viaje, descansa y</text>
+                <text y="169">pierde 1 turno sin jugar.</text>
+
+                <text y="192" font-weight="bold" fill="#52796f">🕳️ EL POZO (No. 31):</text>
+                <text y="205">Atrapado en el pozo hasta que otro</text>
+                <text y="217">jugador caiga y lo rescate.</text>
+
+                <text y="240" font-weight="bold" fill="#0077b6">🌀 EL LABERINTO (No. 42):</text>
+                <text y="253">Del laberinto al 30. Retrocede 12</text>
+                <text y="265">casillas desorientado.</text>
+
+                <text y="288" font-weight="bold" fill="#4a4e69">⛓️ LA CÁRCEL (No. 52):</text>
+                <text y="301">Detenido por la ley, pierde 2 turnos</text>
+                <text y="313">enteros de condena.</text>
+
+                <text y="336" font-weight="bold" fill="#c1121f">💀 LA MUERTE (No. 58):</text>
+                <text y="349">¡El peor castigo! Vuelve al principio</text>
+                <text y="361">a la casilla No. 1 a comenzar.</text>
+
+                <text y="384" font-weight="bold" fill="#d90429">🏆 LA GRAN OCA (No. 63):</text>
+                <text y="397">Para ganar debe entrar con número</text>
+                <text y="409">exacto; si sobran puntos, rebota.</text>
+            </g>
         `;
+        group.appendChild(g);
     }
 
-    createDiceArtwork() {
-        return `
-            <circle r="13" fill="#9b5de5" opacity="0.18"/>
-            <text y="4" text-anchor="middle" font-size="18">🎲</text>
-        `;
+    // Render Every Card-Tile (1 to 62)
+    renderTilesCards() {
+        const group = document.getElementById('svg-tiles-group');
+        if (!group || this.boardCoords.length === 0) return;
+        group.innerHTML = '';
+
+        // Alternating Pastel Cardstock Palette (Vintage Montecarlo)
+        const palette = ['#caf0f8', '#fefae0', '#d8f3dc', '#ffe5d9', '#e0fbfc', '#fff3b0'];
+
+        for (let i = 1; i <= 62; i++) {
+            const coord = this.boardCoords[i];
+            if (!coord) continue;
+
+            const tile = coord.tile;
+            const cardW = this.getCardWidth(i);
+            const cardH = this.getCardHeight(i);
+            const bgColor = this.getTileBgColor(i, tile.tile_type, palette);
+
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', `svg-tile-item tile-${tile.tile_type}`);
+            g.setAttribute('id', `tile-card-${i}`);
+            g.setAttribute('transform', `translate(${coord.x}, ${coord.y})`);
+
+            // Detailed Drawing / Motif
+            const drawing = this.getCardIllustration(i, tile.tile_type);
+
+            g.innerHTML = `
+                <!-- Card Container -->
+                <rect class="svg-card-rect" id="rect-card-${i}" x="${-cardW/2}" y="${-cardH/2}" width="${cardW}" height="${cardH}" rx="5" fill="${bgColor}"/>
+                <rect x="${-cardW/2 + 3}" y="${-cardH/2 + 3}" width="${cardW - 6}" height="${cardH - 6}" rx="3" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+
+                <!-- Red Star Divider Accent -->
+                <polygon class="svg-star-divider" points="${cardW/2 - 2},${-cardH/2 + 2} ${cardW/2 + 2},${-cardH/2} ${cardW/2 - 1},${-cardH/2 + 6}" />
+
+                <!-- Vintage Number Badge -->
+                <rect x="${-cardW/2 + 4}" y="${-cardH/2 + 4}" width="22" height="18" rx="4" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.2"/>
+                <text class="svg-card-num-text" x="${-cardW/2 + 15}" y="${-cardH/2 + 14}">${i}</text>
+
+                <!-- Illustrated Scene -->
+                <g transform="translate(6, 6)">
+                    ${drawing}
+                </g>
+            `;
+
+            group.appendChild(g);
+        }
     }
 
-    createInnArtwork() {
-        return `
-            <circle r="13" fill="#e76f51" opacity="0.18"/>
-            <text y="4" text-anchor="middle" font-size="18">🏨</text>
+    // Casilla 63: Gran Oca & Winding Ribbon
+    renderGranOcaGarden() {
+        const group = document.getElementById('svg-garden-group');
+        if (!group) return;
+        group.innerHTML = '';
+
+        const coord = this.boardCoords[63] || { x: 670, y: 360 };
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', `translate(${coord.x}, ${coord.y})`);
+
+        g.innerHTML = `
+            <!-- Golden Card Base -->
+            <rect x="-85" y="-95" width="170" height="190" rx="14" fill="#fff9db" stroke="#851e1e" stroke-width="3.5" filter="url(#cardShadow)"/>
+            <rect x="-80" y="-90" width="160" height="180" rx="10" fill="none" stroke="#d4af37" stroke-width="2"/>
+
+            <!-- Curving Vintage Ribbon: 'JUEGO DE LA OCA' -->
+            <path d="M -75,-65 Q 0,-85 75,-65 L 75,-35 Q 0,-55 -75,-35 Z" fill="#ffd166" stroke="#851e1e" stroke-width="2"/>
+            <text x="0" y="-48" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="14" fill="#851e1e" letter-spacing="0.5">Juego de la Oca</text>
+
+            <!-- Casilla 63 Number Circle -->
+            <circle cx="0" cy="-14" r="18" fill="#d90429" stroke="#ffffff" stroke-width="2.5"/>
+            <text x="0" y="-9" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="18" fill="#ffffff">63</text>
+
+            <!-- Illustrated Crowned Goose Artwork (Head & Wings) -->
+            <g transform="translate(0, 36)">
+                <!-- Golden Plumage / Crest -->
+                <path d="M-15,-25 Q-30,-45 0,-40 Q30,-45 15,-25 Z" fill="#ffd166" stroke="#851e1e" stroke-width="1.5"/>
+                <text x="0" y="-22" text-anchor="middle" font-size="18">👑</text>
+                <text x="0" y="15" text-anchor="middle" font-size="44">🦆</text>
+            </g>
+
+            <text x="0" y="78" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="11" fill="#851e1e" letter-spacing="1">¡VICTORIA!</text>
         `;
+
+        group.appendChild(g);
     }
 
-    createWellArtwork() {
-        return `
-            <circle r="13" fill="#52796f" opacity="0.18"/>
-            <text y="4" text-anchor="middle" font-size="18">🕳️</text>
-        `;
+    // Helper: Card dimensions based on loop
+    getCardWidth(num) {
+        if (num <= 10) return 82;
+        if (num <= 17) return 80;
+        if (num <= 28) return 74;
+        if (num <= 33) return 80;
+        if (num <= 40) return 76;
+        if (num <= 46) return 76;
+        if (num <= 51) return 74;
+        if (num === 52) return 78;
+        return 62; // 53..=62
     }
 
-    createMazeArtwork() {
-        return `
-            <circle r="13" fill="#0077b6" opacity="0.18"/>
-            <text y="4" text-anchor="middle" font-size="18">🌀</text>
-        `;
+    getCardHeight(num) {
+        if (num <= 10) return 80;
+        if (num <= 17) return 80;
+        if (num <= 28) return 80;
+        if (num <= 33) return 80;
+        if (num <= 40) return 74;
+        if (num <= 46) return 74;
+        if (num <= 51) return 74;
+        if (num === 52) return 74;
+        return 68; // 53..=62
     }
 
-    createPrisonArtwork() {
-        return `
-            <circle r="13" fill="#4a4e69" opacity="0.18"/>
-            <text y="4" text-anchor="middle" font-size="18">⛓️</text>
-        `;
+    getTileBgColor(num, type, palette) {
+        if (type === 'oca') return '#d8f3dc'; // Green pasture / water
+        if (type === 'puente') return '#caf0f8'; // River blue
+        if (type === 'dados') return '#f3e8ff'; // Violet dice
+        if (type === 'posada') return '#ffe5d9'; // Peach inn
+        if (type === 'pozo') return '#e2ece9'; // Stone well
+        if (type === 'laberinto') return '#d7e3fc'; // Maze cyan
+        if (type === 'carcel') return '#ede9fe'; // Prison slate
+        if (type === 'muerte') return '#ffe3e3'; // Skull coral
+        return palette[num % palette.length];
     }
 
-    createSkullArtwork() {
-        return `
-            <circle r="13" fill="#c1121f" opacity="0.25"/>
-            <text y="4" text-anchor="middle" font-size="18">💀</text>
-        `;
+    // Distinct illustrated scene for EVERY card matching classic Montecarlo board
+    getCardIllustration(num, type) {
+        // Special Tiles
+        if (type === 'oca') {
+            return `
+                <text x="0" y="8" text-anchor="middle" font-size="28">🦆</text>
+                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#2a9d8f">OCA</text>
+            `;
+        }
+        if (type === 'puente') {
+            return `
+                <text x="0" y="8" text-anchor="middle" font-size="26">🌉</text>
+                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#457b9d">PUENTE</text>
+            `;
+        }
+        if (type === 'dados') {
+            return `
+                <text x="0" y="8" text-anchor="middle" font-size="24">🎲</text>
+                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#9b5de5">DADOS</text>
+            `;
+        }
+        if (type === 'posada') {
+            return `
+                <text x="0" y="8" text-anchor="middle" font-size="26">🏨</text>
+                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#e76f51">POSADA</text>
+            `;
+        }
+        if (type === 'pozo') {
+            return `
+                <text x="0" y="8" text-anchor="middle" font-size="26">🕳️</text>
+                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#52796f">POZO</text>
+            `;
+        }
+        if (type === 'laberinto') {
+            return `
+                <text x="0" y="8" text-anchor="middle" font-size="26">🌀</text>
+                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8.5" fill="#0077b6">LABERINTO</text>
+            `;
+        }
+        if (type === 'carcel') {
+            return `
+                <text x="0" y="8" text-anchor="middle" font-size="26">⛓️</text>
+                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#4a4e69">CÁRCEL</text>
+            `;
+        }
+        if (type === 'muerte') {
+            return `
+                <text x="0" y="8" text-anchor="middle" font-size="28">💀</text>
+                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#c1121f">MUERTE</text>
+            `;
+        }
+
+        // Classic Montecarlo Board Motifs
+        const motifs = {
+            1: '⛲',  // Fuente
+            2: '🍇',  // Frutas
+            3: '🚶',  // Niños paseando
+            4: '🏊',  // Nadador
+            7: '🔨',  // Herrero
+            8: '🤠',  // Charro campesino
+            10: '🎨', // Pintor
+            11: '🎸', // Músicos mariachi
+            13: '🚂', // Tren de vapor
+            15: '🎹', // Pianista
+            16: '💃', // Danza folclórica
+            17: '🛶', // Góndola / lago
+            20: '🐂', // Torero
+            21: '🎭', // Arlequín
+            22: '🐎', // Charrería
+            24: '👨‍🍳', // Chef
+            25: '🏰', // Fortaleza
+            28: '🏛️', // Pirámide maya
+            29: '⛺', // Campamento
+            30: '🌴', // Palmeras oasis
+            33: '🎣', // Pescador
+            34: '🏃', // Corredor
+            35: '🤸', // Gimnasta
+            37: '🏇', // Jinete
+            38: '🛸', // Dirigible
+            39: '🥊', // Boxeador
+            40: '🐃', // Toro bravo
+            43: '⛵', // Velero
+            44: '🎈', // Globo aerostático
+            46: '⛷️', // Esquiador
+            47: '🏊‍♂️', // Clavadista
+            48: '🎪', // Bufón circo
+            49: '⛹️', // Trampolín
+            51: '⚒️', // Forja
+            55: '🏝️', // Isla
+            56: '🛩️', // Biplano
+            57: '🚢', // Barco de vapor
+            60: '🤼', // Lucha libre
+            61: '🚴', // Ciclista
+            62: '⚾', // Beisbolista
+        };
+
+        const icon = motifs[num] || '⭐';
+        return `<text x="0" y="10" text-anchor="middle" font-size="24">${icon}</text>`;
     }
 
     renderPlayerTokens() {
         const tokensGroup = document.getElementById('svg-tokens-group');
         if (!tokensGroup || !this.room) return;
-
         tokensGroup.innerHTML = '';
 
         const posMap = {};
@@ -394,7 +457,7 @@ class OcaGameApp {
 
                 if (totalOnTile > 1) {
                     const angle = (idx / totalOnTile) * Math.PI * 2;
-                    const radius = 18;
+                    const radius = 16;
                     offsetX = Math.cos(angle) * radius;
                     offsetY = Math.sin(angle) * radius;
                 }
@@ -416,24 +479,23 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 2. CAMERA ENGINE (DYNAMIC AUTO-FOLLOW & PAN-ZOOM)
+    // 2. CAMERA ENGINE: FIXED & STEADY (NO AGGRESSIVE JITTER)
     // ========================================================
     setupCameraGestures() {
         const viewport = document.getElementById('board-viewport');
         const cameraEl = document.getElementById('board-camera');
         if (!viewport || !cameraEl) return;
 
-        // Pointer drag & gestures
         let isDown = false;
-        let lastTouches = [];
 
+        // Manual drag when user explicitly wants to explore
         viewport.addEventListener('pointerdown', (e) => {
             if (e.target.closest('.board-camera-controls')) return;
+            if (!this.camera.isZoomed) return; // In fixed view, no drag needed
+
             isDown = true;
             this.camera.isDragging = true;
-            viewport.classList.add('grabbing');
             cameraEl.classList.remove('camera-smooth');
-
             this.camera.startX = e.clientX;
             this.camera.startY = e.clientY;
             this.camera.camStartX = this.camera.x;
@@ -441,20 +503,17 @@ class OcaGameApp {
         });
 
         window.addEventListener('pointermove', (e) => {
-            if (!isDown) return;
+            if (!isDown || !this.camera.isZoomed) return;
             const dx = e.clientX - this.camera.startX;
             const dy = e.clientY - this.camera.startY;
             this.camera.x = this.camera.camStartX + dx;
             this.camera.y = this.camera.camStartY + dy;
-            this.applyCameraTransform();
+            this.applyCameraTransform(false);
         });
 
         window.addEventListener('pointerup', () => {
-            if (isDown) {
-                isDown = false;
-                this.camera.isDragging = false;
-                viewport.classList.remove('grabbing');
-            }
+            isDown = false;
+            this.camera.isDragging = false;
         });
 
         // Touch Pinch-to-zoom
@@ -475,30 +534,13 @@ class OcaGameApp {
                 const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
                 if (this.camera.pinchDist > 0) {
                     const ratio = dist / this.camera.pinchDist;
-                    this.camera.scale = Math.min(Math.max(this.camera.pinchScale * ratio, 0.9), 3.2);
-                    this.applyCameraTransform();
+                    this.camera.scale = Math.min(Math.max(this.camera.pinchScale * ratio, 1.0), 2.5);
+                    this.camera.isZoomed = (this.camera.scale > 1.08);
+                    this.updateCameraPillText();
+                    this.applyCameraTransform(false);
                 }
             }
         }, { passive: true });
-
-        // Mouse Wheel Zoom
-        viewport.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const delta = e.deltaY < 0 ? 0.15 : -0.15;
-            this.camera.scale = Math.min(Math.max(this.camera.scale + delta, 0.9), 3.0);
-            cameraEl.classList.remove('camera-smooth');
-            this.applyCameraTransform();
-        }, { passive: false });
-
-        // Double-tap to toggle zoom
-        let lastTap = 0;
-        viewport.addEventListener('touchend', (e) => {
-            const now = Date.now();
-            if (now - lastTap < 300) {
-                this.toggleCameraZoom();
-            }
-            lastTap = now;
-        });
 
         // Buttons
         document.getElementById('btn-camera-toggle').addEventListener('click', () => {
@@ -510,17 +552,19 @@ class OcaGameApp {
         });
 
         document.getElementById('btn-zoom-in').addEventListener('click', () => {
-            this.camera.scale = Math.min(this.camera.scale + 0.35, 3.0);
+            this.camera.scale = Math.min(this.camera.scale + 0.3, 2.5);
             this.camera.isZoomed = true;
             this.updateCameraPillText();
             this.applyCameraTransform(true);
         });
 
         document.getElementById('btn-zoom-out').addEventListener('click', () => {
-            this.camera.scale = Math.max(this.camera.scale - 0.35, 0.9);
-            if (this.camera.scale <= 1.05) this.camera.isZoomed = false;
-            this.updateCameraPillText();
-            this.applyCameraTransform(true);
+            this.camera.scale = Math.max(this.camera.scale - 0.3, 1.0);
+            if (this.camera.scale <= 1.05) {
+                this.resetCameraToFullView();
+            } else {
+                this.applyCameraTransform(true);
+            }
         });
 
         document.getElementById('btn-zoom-reset').addEventListener('click', () => {
@@ -546,7 +590,7 @@ class OcaGameApp {
         this.updateCameraPillText();
 
         if (this.camera.isZoomed) {
-            this.focusCameraOnTile(this.camera.targetTile || 1, true);
+            this.centerOnMyToken();
         } else {
             this.resetCameraToFullView();
         }
@@ -559,10 +603,10 @@ class OcaGameApp {
 
         if (this.camera.isZoomed) {
             pill.classList.add('active');
-            text.textContent = 'Zoom Acción';
+            text.textContent = 'Zoom Activo';
         } else {
             pill.classList.remove('active');
-            text.textContent = 'Vista Completa';
+            text.textContent = 'Vista Fija (Estable)';
         }
     }
 
@@ -575,37 +619,33 @@ class OcaGameApp {
         this.applyCameraTransform(true);
     }
 
-    focusCameraOnTile(tileNum, smooth = true) {
+    // Soft single-glide only when needed
+    softGlideToTile(tileNum) {
+        if (!this.camera.isZoomed) return; // Keep fixed if in full view!
+
         const viewport = document.getElementById('board-viewport');
         if (!viewport || this.boardCoords.length === 0) return;
 
         const coords = this.boardCoords[tileNum] || this.boardCoords[0];
-        this.camera.targetTile = tileNum;
-
-        const isMobile = window.innerWidth < 768;
-        const targetScale = isMobile ? 2.2 : 1.7;
-        this.camera.scale = targetScale;
-        this.camera.isZoomed = true;
-        this.updateCameraPillText();
-
         const vWidth = viewport.clientWidth;
         const vHeight = viewport.clientHeight;
 
-        // Position of tile in 1000x890 coordinate space
-        const targetX = (vWidth / 2) - (coords.x * (vWidth / 1000)) * targetScale;
-        const targetY = (vHeight / 2) - (coords.y * (vHeight / 890)) * targetScale;
+        const targetX = (vWidth / 2) - (coords.x * (vWidth / 1000)) * this.camera.scale;
+        const targetY = (vHeight / 2) - (coords.y * (vHeight / 820)) * this.camera.scale;
 
         this.camera.x = targetX;
         this.camera.y = targetY;
-
-        this.applyCameraTransform(smooth);
+        this.applyCameraTransform(true);
     }
 
     centerOnMyToken() {
         if (!this.room || !this.myId) return;
         const me = this.room.players.find(p => p.id === this.myId);
         if (me) {
-            this.focusCameraOnTile(me.position, true);
+            this.camera.scale = 1.6;
+            this.camera.isZoomed = true;
+            this.updateCameraPillText();
+            this.softGlideToTile(me.position);
         }
     }
 
@@ -624,7 +664,9 @@ class OcaGameApp {
             dot.title = `${p.name} (Casilla ${p.position})`;
 
             dot.addEventListener('click', () => {
-                this.focusCameraOnTile(p.position, true);
+                if (this.camera.isZoomed) {
+                    this.softGlideToTile(p.position);
+                }
             });
 
             container.appendChild(dot);
@@ -719,33 +761,36 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 5. GAME FLOW & ACTION-CAM ANIMATIONS
+    // 5. GAME FLOW & CALM TOKEN ANIMATIONS (ZERO DIZZINESS)
     // ========================================================
     async handleTurnEvent(event) {
         this.isAnimating = true;
         const rollBtn = document.getElementById('btn-roll-dice');
         if (rollBtn) rollBtn.disabled = true;
 
-        // 1. Auto-Follow Camera: Focus on active token as soon as turn begins
-        this.focusCameraOnTile(event.from_pos, true);
-
-        // 2. Animate Dice Roll
+        // 1. Animate Dice Roll (camera stays calm and still)
         this.animateDiceRoll(event.dice, event.total);
         if (window.ocaAudio) window.ocaAudio.playDiceRoll();
 
-        await this.sleep(850);
+        await this.sleep(750);
 
-        // 3. Hop through path and camera follows dynamically!
+        // 2. Token hops smoothly along the path - NO CAMERA JITTER!
         if (event.path && event.path.length > 0) {
             for (let i = 0; i < event.path.length; i++) {
                 const stepPos = event.path[i];
                 this.moveTokenTo(event.player_id, stepPos);
-                // Action cam keeps following active player
-                this.focusCameraOnTile(stepPos, true);
+
+                // Highlight card gently without moving camera
+                this.highlightCard(stepPos);
 
                 if (window.ocaAudio) window.ocaAudio.playStep();
-                await this.sleep(260);
+                await this.sleep(220);
             }
+        }
+
+        // 3. Optional soft glide only after entire move completes, if user zoomed in
+        if (this.camera.isZoomed) {
+            this.softGlideToTile(event.final_pos);
         }
 
         // 4. Handle Special Tile Triggers & Rhymes
@@ -753,7 +798,6 @@ class OcaGameApp {
             this.showRhymeBanner(event.tile_type, event.rhyme);
         }
 
-        // Audio cues for special tiles
         if (window.ocaAudio) {
             switch (event.tile_type) {
                 case 'oca':
@@ -776,7 +820,7 @@ class OcaGameApp {
             }
         }
 
-        // 5. Log event & update radar
+        // 5. Log & Radar update
         this.addLogEntry(event);
         this.updateRaceRadar();
 
@@ -788,6 +832,14 @@ class OcaGameApp {
 
         this.isAnimating = false;
         this.updateTurnControls();
+    }
+
+    highlightCard(tileNum) {
+        document.querySelectorAll('.svg-card-rect').forEach(r => r.classList.remove('active-tile'));
+        const activeRect = document.getElementById(`rect-card-${tileNum}`);
+        if (activeRect) {
+            activeRect.classList.add('active-tile');
+        }
     }
 
     animateDiceRoll(dice, total) {
@@ -814,7 +866,7 @@ class OcaGameApp {
             }
 
             totalDisplay.textContent = total;
-        }, 600);
+        }, 550);
     }
 
     moveTokenTo(playerId, tileNum) {
@@ -887,7 +939,6 @@ class OcaGameApp {
         this.switchView('room-lobby-view');
         document.getElementById('display-room-code').textContent = this.room.code;
 
-        // Render QR Code
         const qrContainer = document.getElementById('qrcode-container');
         qrContainer.innerHTML = '';
         const roomUrl = `${window.location.origin}${window.location.pathname}?room=${this.room.code}`;
@@ -967,7 +1018,6 @@ class OcaGameApp {
             }
         }
 
-        // Standings leaderboard in sidebar (click to fly camera!)
         const listContainer = document.getElementById('game-players-list');
         if (listContainer) {
             listContainer.innerHTML = '';
@@ -979,7 +1029,6 @@ class OcaGameApp {
                 item.className = `game-player-item ${isCurr ? 'current-turn' : ''}`;
                 item.style.borderLeft = `4px solid ${p.color}`;
                 item.style.cursor = 'pointer';
-                item.title = `Toca para enfocar a ${p.name}`;
 
                 let trapTag = '';
                 if (p.in_well) trapTag = '<span class="game-player-trap">🕳️ En el Pozo</span>';
@@ -993,9 +1042,11 @@ class OcaGameApp {
                     <span class="game-player-pos">Casilla ${p.position}</span>
                 `;
 
-                // Tapping a player zooms the camera right onto their token
                 item.addEventListener('click', () => {
-                    this.focusCameraOnTile(p.position, true);
+                    this.highlightCard(p.position);
+                    if (this.camera.isZoomed) {
+                        this.softGlideToTile(p.position);
+                    }
                 });
 
                 listContainer.appendChild(item);
