@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{mpsc, RwLock};
 
+use crate::board::TileType;
 use crate::game::{GameRoom, GameStatus};
 
 pub type RoomSockets = HashMap<String, mpsc::UnboundedSender<Message>>;
@@ -106,6 +107,7 @@ pub fn maybe_schedule_bot_turn(state: AppState, room_code: String, delay_ms: u64
         tokio::time::sleep(Duration::from_millis(delay_ms)).await;
 
         let mut turn_event_payload: Option<Value> = None;
+        let mut chat_msg_payload: Option<Value> = None;
         let mut room_state_payload: Option<Value> = None;
         let mut next_bot_delay: Option<u64> = None;
 
@@ -130,6 +132,46 @@ pub fn maybe_schedule_bot_turn(state: AppState, room_code: String, delay_ms: u64
             let bot_id = curr.id.clone();
             if let Ok(event) = room.roll_dice(&bot_id) {
                 let wait_ms = (event.path.len() as u64 * 250) + 2600;
+
+                let bot_shout: Option<String> = if event.is_win {
+                    Some("¡Gané la Gran Oca! ¡Viva México! 🏆🦆".to_string())
+                } else {
+                    match event.tile_type {
+                        TileType::Oca => Some("¡De oca a oca y tiro porque me toca! 🦆".to_string()),
+                        TileType::Puente => Some("¡De puente a puente y tiro porque me lleva la corriente! 🌉".to_string()),
+                        TileType::Dados => Some("¡De dados a dados y tiro porque me ha tocado! 🎲".to_string()),
+                        TileType::Pozo => Some("¡Ayúdenme, me caí al pozo! 🕳️".to_string()),
+                        TileType::Posada => Some("A descansar un ratito en la posada... 🏨".to_string()),
+                        TileType::Carcel => Some("¡Soy inocente, oficial! ⛓️".to_string()),
+                        TileType::Muerte => Some("¡Noooo, la Calaca me regresó al inicio! 💀".to_string()),
+                        TileType::Laberinto => Some("¡Me perdí en el laberinto! 🌀".to_string()),
+                        _ => {
+                            let mut rng = rand::rng();
+                            if rng.random_bool(0.20) {
+                                let quotes = [
+                                    "¡Miren ese tiro! 🎲",
+                                    "¡Abran paso a las plumas! 🪿",
+                                    "¡Nadie me detiene! 💨",
+                                    "¡Cuidado que voy volando! ✨",
+                                    "¡La suerte está de mi lado! 🍀",
+                                ];
+                                Some(quotes[rng.random_range(0..quotes.len())].to_string())
+                            } else {
+                                None
+                            }
+                        }
+                    }
+                };
+
+                if let Some(ref shout) = bot_shout {
+                    if let Some(msg) = room.add_chat(bot_id.clone(), shout.clone()) {
+                        chat_msg_payload = Some(json!({
+                            "type": "chat_message",
+                            "chat": msg
+                        }));
+                    }
+                }
+
                 turn_event_payload = Some(json!({
                     "type": "turn_event",
                     "event": event
@@ -151,6 +193,9 @@ pub fn maybe_schedule_bot_turn(state: AppState, room_code: String, delay_ms: u64
 
         if let Some(event_pl) = turn_event_payload {
             broadcast_to_room(&state, &room_code, &event_pl).await;
+        }
+        if let Some(chat_pl) = chat_msg_payload {
+            broadcast_to_room(&state, &room_code, &chat_pl).await;
         }
         if let Some(state_pl) = room_state_payload {
             broadcast_to_room(&state, &room_code, &state_pl).await;
