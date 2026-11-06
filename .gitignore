@@ -1,0 +1,27 @@
+# Rust build artifacts
+/target
+
+# Environment variables & secrets prevention
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.cert
+
+# Operating System files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE & Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+.gemini/
+.claude/
+
+# Local logs & scratch directories
+*.log
+scratch/

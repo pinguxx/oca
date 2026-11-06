@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>🦆 ¡El Juego de la Oca Online! 🎲</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Ambient Particles Layer -->
+  <div id="ambient-layer" class="ambient-layer" aria-hidden="true"></div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas" class="confetti-canvas" aria-hidden="true"></canvas>
+
+  <!-- Notification Banner (Refranes / Rhymes) -->
+  <div id="rhyme-banner" class="rhyme-banner hidden">
+    <div class="rhyme-badge" id="rhyme-badge">🦆</div>
+    <div class="rhyme-content">
+      <div class="rhyme-title" id="rhyme-title">¡De oca a oca!</div>
+      <div class="rhyme-text" id="rhyme-text">¡Y tiro porque me toca!</div>
+    </div>
+  </div>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="logo-box">
+      <span class="logo-icon">🦆</span>
+      <div class="logo-info">
+        <h1 class="logo-title">EL JUEGO DE LA OCA</h1>
+        <span class="logo-subtitle">¡De oca a oca y tiro porque me toca! 🎲</span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <button id="btn-rules" class="btn-icon" title="Reglas del Juego" aria-label="Ver Reglas">📜</button>
+      <button id="btn-sound" class="btn-icon" title="Sonido" aria-label="Alternar Sonido">🔊</button>
+      <button id="btn-leave" class="btn-icon hidden" title="Salir de la Sala" aria-label="Salir">🚪</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-layout">
+
+    <!-- ========================================== -->
+    <!-- 1. LOBBY VIEW (WELCOME / CREAR / UNIRSE)   -->
+    <!-- ========================================== -->
+    <section id="lobby-view" class="view-panel active">
+      <div class="lobby-card">
+        <div class="hero-banner">
+          <div class="hero-goose">🪿</div>
+          <h2 class="hero-title">¡Bienvenido al Gran Juego de la Oca!</h2>
+          <p class="hero-desc">
+            El tradicional juego de mesa de 63 casillas en espiral con sus puentes, posada, laberinto, dados, cárcel y la temida muerte.
+          </p>
+        </div>
+
+        <!-- Player Customization -->
+        <div class="form-section">
+          <label class="form-label" for="player-name-input">Tu Nombre o Apodo:</label>
+          <input type="text" id="player-name-input" class="text-input" placeholder="Ej. El Ganso Dorado" maxlength="18" value="Jugador 1">
+
+          <label class="form-label">Elige tu Ficha y Mascota:</label>
+          <div class="avatar-selector" id="avatar-selector">
+            <button class="avatar-opt active" data-avatar="🪿">🪿</button>
+            <button class="avatar-opt" data-avatar="🦆">🦆</button>
+            <button class="avatar-opt" data-avatar="🎩">🎩</button>
+            <button class="avatar-opt" data-avatar="👑">👑</button>
+            <button class="avatar-opt" data-avatar="🌵">🌵</button>
+            <button class="avatar-opt" data-avatar="🌮">🌮</button>
+          </div>
+
+          <label class="form-label">Elige tu Color Tradicional:</label>
+          <div class="color-selector" id="color-selector">
+            <button class="color-opt active" data-color="#e63946" style="background: #e63946;" title="Rojo Caramelo"></button>
+            <button class="color-opt" data-color="#457b9d" style="background: #457b9d;" title="Azul Talavera"></button>
+            <button class="color-opt" data-color="#2a9d8f" style="background: #2a9d8f;" title="Verde Jade"></button>
+            <button class="color-opt" data-color="#e76f51" style="background: #e76f51;" title="Naranja Barro"></button>
+            <button class="color-opt" data-color="#9b5de5" style="background: #9b5de5;" title="Morado Bugambilia"></button>
+            <button class="color-opt" data-color="#f15bb5" style="background: #f15bb5;" title="Rosa Mexicano"></button>
+          </div>
+        </div>
+
+        <!-- Mode Tabs -->
+        <div class="mode-tabs">
+          <button class="tab-btn active" id="tab-create" data-target="panel-create">✨ Crear Sala</button>
+          <button class="tab-btn" id="tab-join" data-target="panel-join">🔗 Unirse a Sala</button>
+          <button class="tab-btn" id="tab-local" data-target="panel-local">🤖 Solitario / Local</button>
+        </div>
+
+        <!-- Tab Panel: Crear Sala -->
+        <div class="tab-content active" id="panel-create">
+          <div class="rules-toggle-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-two-dice" checked>
+              <span>Jugar con 2 dados clásicos (incluye regla del 9 inicial)</span>
+            </label>
+          </div>
+          <button class="btn btn-primary btn-block" id="btn-create-room">
+            Crear Sala Multijugador 🚀
+          </button>
+        </div>
+
+        <!-- Tab Panel: Unirse a Sala -->
+        <div class="tab-content" id="panel-join">
+          <div class="join-row">
+            <input type="text" id="join-code-input" class="text-input text-code" placeholder="CÓDIGO (ej. OC25)" maxlength="6">
+            <button class="btn btn-primary" id="btn-join-room">Unirse</button>
+          </div>
+        </div>
+
+        <!-- Tab Panel: Solitario / Local -->
+        <div class="tab-content" id="panel-local">
+          <p class="tab-note">Juega inmediatamente contra oponentes controlados por la computadora (Bots inteligentes).</p>
+          <button class="btn btn-success btn-block" id="btn-quick-solo">
+            ¡Comenzar Partida Solitario vs Bots! 🤖
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. ROOM WAITING LOBBY                      -->
+    <!-- ========================================== -->
+    <section id="room-lobby-view" class="view-panel">
+      <div class="waiting-card">
+        <div class="waiting-header">
+          <div>
+            <span class="badge-status">SALA DE ESPERA</span>
+            <h2 class="waiting-title">Código de Sala: <span id="display-room-code" class="code-highlight">----</span></h2>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-copy-code" title="Copiar enlace de sala">📋 Copiar</button>
+        </div>
+
+        <!-- QR Code Container -->
+        <div class="qr-box">
+          <div id="qrcode-container"></div>
+          <span class="qr-hint">Escanea el código QR con tu celular para unirte</span>
+        </div>
+
+        <!-- Connected Players List -->
+        <div class="players-list-box">
+          <div class="players-list-header">
+            <h3>Jugadores en la Sala (<span id="players-count">1</span>/6)</h3>
+            <button class="btn btn-outline btn-xs" id="btn-add-bot">+ Agregar Bot 🤖</button>
+          </div>
+          <ul id="waiting-players-list" class="waiting-players-list">
+            <!-- Rendered dynamically -->
+          </ul>
+        </div>
+
+        <!-- Host Actions -->
+        <div class="lobby-actions" id="host-controls">
+          <button class="btn btn-success btn-lg btn-block" id="btn-start-game">
+            ¡Iniciar Partida Ahora! 🏁
+          </button>
+        </div>
+        <div class="lobby-actions guest-wait-msg hidden" id="guest-controls">
+          <span class="spinner-icon">⏳</span> Esperando a que el anfitrión inicie la partida...
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. GAMEPLAY VIEW (BOARD + HUD + CONTROLS)  -->
+    <!-- ========================================== -->
+    <section id="game-view" class="view-panel">
+      <div class="game-container">
+
+        <!-- Board Column -->
+        <div class="board-column">
+          <!-- Turn Indicator Header -->
+          <div class="turn-bar" id="turn-bar">
+            <div class="turn-avatar" id="turn-avatar">🪿</div>
+            <div class="turn-info">
+              <span class="turn-label">TURNO ACTUAL</span>
+              <span class="turn-name" id="turn-name">Don Ganso</span>
+            </div>
+            <div class="turn-status-badge" id="turn-status-badge">Esperando tiro...</div>
+          </div>
+
+          <!-- The Spiral Board Viewport -->
+          <div class="board-wrapper">
+            <svg id="oca-board" class="oca-board-svg" viewBox="0 0 1000 890" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <!-- Gradients and Patterns -->
+                <linearGradient id="gardenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ffd166"/>
+                  <stop offset="50%" stop-color="#ffb703"/>
+                  <stop offset="100%" stop-color="#fb8500"/>
+                </linearGradient>
+
+                <linearGradient id="tileGradNormal" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#ffffff"/>
+                  <stop offset="100%" stop-color="#f4f1de"/>
+                </linearGradient>
+
+                <linearGradient id="tileGradOca" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#2a9d8f"/>
+                  <stop offset="100%" stop-color="#1f7a6f"/>
+                </linearGradient>
+
+                <linearGradient id="tileGradPuente" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#457b9d"/>
+                  <stop offset="100%" stop-color="#1d3557"/>
+                </linearGradient>
+
+                <linearGradient id="tileGradDanger" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#e63946"/>
+                  <stop offset="100%" stop-color="#9b1d20"/>
+                </linearGradient>
+
+                <filter id="tileShadow" x="-10%" y="-10%" width="125%" height="125%">
+                  <feDropShadow dx="1" dy="3" stdDeviation="2" flood-color="#000000" flood-opacity="0.25"/>
+                </filter>
+              </defs>
+
+              <!-- Track background connecting line -->
+              <path id="board-spiral-path" class="board-spiral-path" d="" fill="none"/>
+
+              <!-- Tiles container rendered by JS -->
+              <g id="svg-tiles-group"></g>
+
+              <!-- Central Garden Decor -->
+              <g id="svg-garden-group"></g>
+
+              <!-- Player Tokens container rendered by JS -->
+              <g id="svg-tokens-group"></g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Sidebar / Controls Column -->
+        <div class="sidebar-column">
+
+          <!-- Dice & Action Card -->
+          <div class="action-card">
+            <h3 class="card-title">Tirada de Dados</h3>
+            
+            <div class="dice-arena">
+              <div class="die" id="die-1" data-value="1">
+                <span class="pip pip-center"></span>
+              </div>
+              <div class="die" id="die-2" data-value="1">
+                <span class="pip pip-center"></span>
+              </div>
+            </div>
+
+            <div class="dice-total-display">
+              Total: <span id="dice-total-num" class="dice-total-num">2</span>
+            </div>
+
+            <button class="btn btn-action btn-block" id="btn-roll-dice">
+              🎲 ¡TIRAR DADOS! 🎲
+            </button>
+          </div>
+
+          <!-- Players Tracker & Standings -->
+          <div class="players-card">
+            <h3 class="card-title">Posiciones</h3>
+            <div id="game-players-list" class="game-players-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Activity Log & Chat -->
+          <div class="log-card">
+            <div class="log-tabs">
+              <button class="log-tab active" id="tab-log" data-target="content-log">📜 Crónica</button>
+              <button class="log-tab" id="tab-chat" data-target="content-chat">💬 Chat & Porras</button>
+            </div>
+
+            <div class="log-body active" id="content-log">
+              <div id="events-log-list" class="events-log-list"></div>
+            </div>
+
+            <div class="log-body" id="content-chat">
+              <div id="chat-messages-list" class="chat-messages-list"></div>
+              
+              <!-- Quick Reaction Shouts -->
+              <div class="quick-reactions">
+                <button class="btn-shout" data-shout="¡De oca a oca!">🦆 Oca!</button>
+                <button class="btn-shout" data-shout="¡Cuidado con la muerte!">💀 Muerte!</button>
+                <button class="btn-shout" data-shout="¡Al pozo!">🕳️ Pozo!</button>
+                <button class="btn-shout" data-shout="¡Tira con fe!">🎲 Suerte!</button>
+              </div>
+
+              <form id="chat-form" class="chat-form">
+                <input type="text" id="chat-input" class="text-input text-sm" placeholder="Escribe un mensaje..." maxlength="120">
+                <button type="submit" class="btn btn-primary btn-sm">Enviar</button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODALS                                     -->
+  <!-- ========================================== -->
+
+  <!-- Victory Modal -->
+  <div id="victory-modal" class="modal-backdrop hidden">
+    <div class="modal-card victory-card">
+      <div class="victory-trophy">🏆</div>
+      <h2 class="victory-headline">¡TENEMOS UN CAMPEÓN!</h2>
+      <div class="winner-presentation">
+        <span class="winner-avatar" id="winner-avatar">🪿</span>
+        <h3 class="winner-name" id="winner-name">Don Ganso</h3>
+        <p class="winner-tag">¡Ha conquistado el Gran Jardín de la Oca en la casilla 63!</p>
+      </div>
+
+      <div class="modal-actions" id="winner-actions">
+        <button class="btn btn-success btn-lg btn-block" id="btn-restart-game">
+          🔄 Jugar Otra Partida
+        </button>
+        <button class="btn btn-outline btn-block" id="btn-victory-back-lobby">
+          🏠 Volver al Menú Principal
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rulebook Modal -->
+  <div id="rules-modal" class="modal-backdrop hidden">
+    <div class="modal-card rules-card">
+      <div class="modal-header">
+        <h2 class="modal-title">📜 Reglas de El Juego de la Oca</h2>
+        <button class="btn-close" id="btn-close-rules">✕</button>
+      </div>
+
+      <div class="modal-scrollable-body">
+        <h3>🎯 Objetivo</h3>
+        <p>Ser el primer jugador en llegar con la <strong>tirada exacta</strong> a la casilla 63: <em>El Gran Jardín de la Oca</em>.</p>
+
+        <h3>🦆 Las Casillas Especiales</h3>
+        <div class="rules-grid">
+          <div class="rule-item">
+            <span class="rule-icon">🦆</span>
+            <div>
+              <strong>Las Ocas (5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59):</strong>
+              <p><em>«De oca a oca y tiro porque me toca»</em>. Saltas a la siguiente oca y vuelves a tirar inmediatamente.</p>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">🌉</span>
+            <div>
+              <strong>El Puente (6 y 12):</strong>
+              <p><em>«De puente a puente y tiro porque me lleva la corriente»</em>. Saltas al otro puente y tiras de nuevo.</p>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">🎲</span>
+            <div>
+              <strong>Los Dados (26 y 53):</strong>
+              <p><em>«De dados a dados y tiro porque me ha tocado»</em>. Saltas entre ambas y repites tiro.</p>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">🏨</span>
+            <div>
+              <strong>La Posada (19):</strong>
+              <p>Cansado del viaje, descansas y <strong>pierdes 1 turno</strong>.</p>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">🕳️</span>
+            <div>
+              <strong>El Pozo (31):</strong>
+              <p>Quedas atrapado hasta que otro jugador caiga en él para rescatarte (intercambian lugares) o tras pasar 3 turnos.</p>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">🌀</span>
+            <div>
+              <strong>El Laberinto (42):</strong>
+              <p><em>«Del laberinto al 30»</em>. Te desorientas y retrocedes a la casilla 30.</p>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">⛓️</span>
+            <div>
+              <strong>La Cárcel (52):</strong>
+              <p>Quedas encerrado y <strong>pierdes 2 turnos</strong>.</p>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">💀</span>
+            <div>
+              <strong>La Muerte (58):</strong>
+              <p>¡El peor castigo! Vuelves al inicio: <strong>casilla 1</strong>.</p>
+            </div>
+          </div>
+        </div>
+
+        <h3>🎲 Regla Especial del 9 Inicial</h3>
+        <p>Al iniciar la partida (desde la casilla 0):</p>
+        <ul>
+          <li>Si sacas 9 con <strong>5 y 4</strong>: Vuelas directo a la <strong>casilla 53</strong> y vuelves a tirar.</li>
+          <li>Si sacas 9 con <strong>6 y 3</strong>: Vuelas directo a la <strong>casilla 26</strong> y vuelves a tirar.</li>
+        </ul>
+
+        <h3>↩️ Rebote en la Casilla 63</h3>
+        <p>Debes entrar a la casilla 63 con el número exacto. Si te sobran puntos, <strong>rebotas hacia atrás</strong>. Si al rebotar caes en la Muerte o una Oca, ¡se activa su efecto!</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btn-got-rules">¡Entendido, a jugar!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="qrcode.min.js"></script>
+  <script src="audio.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

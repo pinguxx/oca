@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: el-juego-de-la-oca
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
