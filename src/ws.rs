@@ -772,8 +772,9 @@ pub fn start_background_maintenance(state: AppState) {
                 )
                 .await;
 
+                let wait_ms = (event.path.len() as u64 * 250) + 2600;
                 if next_bot {
-                    maybe_schedule_bot_turn(state.clone(), code, 1200);
+                    maybe_schedule_bot_turn(state.clone(), code, wait_ms);
                 }
             }
 
