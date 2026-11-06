@@ -620,8 +620,9 @@ class OcaGameApp {
             if (!isDown || !this.camera.isZoomed) return;
             const dx = e.clientX - this.camera.startX;
             const dy = e.clientY - this.camera.startY;
-            this.camera.x = this.camera.camStartX + dx;
-            this.camera.y = this.camera.camStartY + dy;
+            const clamped = this.clampCameraCoords(this.camera.camStartX + dx, this.camera.camStartY + dy);
+            this.camera.x = clamped.x;
+            this.camera.y = clamped.y;
             this.applyCameraTransform(false);
         });
 
@@ -649,9 +650,12 @@ class OcaGameApp {
                 const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
                 if (this.camera.pinchDist > 0) {
                     const ratio = dist / this.camera.pinchDist;
-                    this.camera.scale = Math.min(Math.max(this.camera.pinchScale * ratio, 1.0), 2.5);
+                    this.camera.scale = Math.min(Math.max(this.camera.pinchScale * ratio, 1.0), 3.2);
                     this.camera.isZoomed = (this.camera.scale > 1.08);
                     this.updateCameraPillText();
+                    const clamped = this.clampCameraCoords(this.camera.x, this.camera.y);
+                    this.camera.x = clamped.x;
+                    this.camera.y = clamped.y;
                     this.applyCameraTransform(false);
                 }
             }
@@ -677,6 +681,51 @@ class OcaGameApp {
         cameraEl.style.transform = `translate3d(${this.camera.x}px, ${this.camera.y}px, 0) scale(${this.camera.scale})`;
     }
 
+    // Camera Clamping: Ensures board tiles ALWAYS fill the screen without leaving empty white margins outside the board edges
+    clampCameraCoords(targetX, targetY) {
+        const viewport = document.getElementById('board-viewport');
+        if (!viewport) return { x: targetX, y: targetY };
+
+        const vW = viewport.clientWidth;
+        const vH = viewport.clientHeight;
+        if (vW === 0 || vH === 0) return { x: targetX, y: targetY };
+
+        if (!this.camera.isZoomed || this.camera.scale <= 1.02) {
+            return { x: 0, y: 0 };
+        }
+
+        const scaleX = vW / 1000;
+        const scaleY = vH / 900;
+        const baseScale = Math.min(scaleX, scaleY);
+
+        const renderedSvgW = 1000 * baseScale;
+        const renderedSvgH = 900 * baseScale;
+        const svgOffsetX = (vW - renderedSvgW) / 2;
+        const svgOffsetY = (vH - renderedSvgH) / 2;
+
+        const minX = vW - ((svgOffsetX + renderedSvgW) * this.camera.scale);
+        const maxX = - (svgOffsetX * this.camera.scale);
+        const minY = vH - ((svgOffsetY + renderedSvgH) * this.camera.scale);
+        const maxY = - (svgOffsetY * this.camera.scale);
+
+        let clampedX = targetX;
+        let clampedY = targetY;
+
+        if (minX <= maxX) {
+            clampedX = Math.max(minX, Math.min(maxX, targetX));
+        } else {
+            clampedX = (minX + maxX) / 2;
+        }
+
+        if (minY <= maxY) {
+            clampedY = Math.max(minY, Math.min(maxY, targetY));
+        } else {
+            clampedY = (minY + maxY) / 2;
+        }
+
+        return { x: clampedX, y: clampedY };
+    }
+
     calculateTargetCameraXY(tileNum) {
         const viewport = document.getElementById('board-viewport');
         if (!viewport || this.boardCoords.length === 0) return;
@@ -698,14 +747,18 @@ class OcaGameApp {
         const tileX = svgOffsetX + (coords.x * baseScale);
         const tileY = svgOffsetY + (coords.y * baseScale);
 
-        this.camera.x = (vW / 2) - (tileX * this.camera.scale);
-        this.camera.y = (vH / 2) - (tileY * this.camera.scale);
+        const rawTargetX = (vW / 2) - (tileX * this.camera.scale);
+        const rawTargetY = (vH / 2) - (tileY * this.camera.scale);
+
+        const clamped = this.clampCameraCoords(rawTargetX, rawTargetY);
+        this.camera.x = clamped.x;
+        this.camera.y = clamped.y;
     }
 
-    // Smooth zoom into a specific token (larger zoom on mobile so cards and art are big & readable)
+    // Smooth zoom into a specific token (2.3x on mobile so cards, icons and text are big & crystal clear)
     zoomInToToken(tileNum, duration = 0.85) {
         const isMobile = window.innerWidth <= 768;
-        this.camera.scale = isMobile ? 1.82 : 1.5;
+        this.camera.scale = isMobile ? 2.3 : 1.75;
         this.camera.isZoomed = true;
         this.updateCameraPillText();
         this.calculateTargetCameraXY(tileNum);
