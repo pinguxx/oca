@@ -187,25 +187,21 @@
             <div class="turn-status-badge" id="turn-status-badge">Esperando tiro...</div>
           </div>
 
-          <!-- Mini Race Radar (Standings Bar) -->
+          <!-- Mini Race Radar (Standings Bar) with Camera Mode Toggle -->
           <div class="race-radar-bar" id="race-radar-bar" title="Progreso de la carrera hacia la casilla 63">
             <span class="radar-label">🏁 Salida</span>
             <div class="radar-track" id="radar-track">
               <div id="radar-runners" class="radar-runners"></div>
             </div>
             <span class="radar-label">Meta 63 🏆</span>
+            <button id="btn-camera-toggle" class="btn-cam-pill" title="Alternar entre Vista Completa y Seguir Jugada">
+              <span class="cam-icon" id="cam-icon">🎯</span>
+              <span id="cam-mode-text">Seguir</span>
+            </button>
           </div>
 
           <!-- The Spiral Board Viewport & Camera -->
           <div class="board-wrapper" id="board-wrapper">
-            <!-- Floating Camera Toggle (Full View vs Follow My Chip) -->
-            <div class="board-camera-controls">
-              <button id="btn-camera-toggle" class="btn-cam-pill" title="Alternar entre Vista Completa y Seguir Ficha">
-                <span class="cam-icon" id="cam-icon">🎯</span>
-                <span id="cam-mode-text">Seguir Mi Ficha</span>
-              </button>
-            </div>
-
             <div class="board-viewport" id="board-viewport">
               <div class="board-camera" id="board-camera">
                 <svg id="oca-board" class="oca-board-svg" viewBox="0 0 1000 900" preserveAspectRatio="xMidYMid meet">

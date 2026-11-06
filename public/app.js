@@ -18,8 +18,8 @@ class OcaGameApp {
         this.selectedAvatar = '🪿';
         this.selectedColor = '#e63946';
 
-        // Cinematic Action Camera: Follows chip smoothly when it is your turn
-        this.followMyChip = true;
+        // Cinematic Action Follow Camera: Smoothly tracks active player/bot turn
+        this.followAction = true;
         this.activeMovingPlayerId = null;
 
         // Sequential Turn Queue (prevents race conditions between human and bots)
@@ -702,10 +702,10 @@ class OcaGameApp {
         this.camera.y = (vH / 2) - (tileY * this.camera.scale);
     }
 
-    // Rule 2 & 6: Smooth zoom into a specific token
+    // Smooth zoom into a specific token (larger zoom on mobile so cards and art are big & readable)
     zoomInToToken(tileNum, duration = 0.85) {
         const isMobile = window.innerWidth <= 768;
-        this.camera.scale = isMobile ? 1.38 : 1.5;
+        this.camera.scale = isMobile ? 1.82 : 1.5;
         this.camera.isZoomed = true;
         this.updateCameraPillText();
         this.calculateTargetCameraXY(tileNum);
@@ -718,7 +718,7 @@ class OcaGameApp {
         }
     }
 
-    // Rule 5: Camera slowly and steadily tracks each hop step
+    // Camera slowly and steadily tracks each hop step
     trackStepWithCamera(tileNum, durationSec = 0.24) {
         if (!this.camera.isZoomed) return;
         this.calculateTargetCameraXY(tileNum);
@@ -731,7 +731,7 @@ class OcaGameApp {
         }
     }
 
-    // Rule 1 & 3: Reset to full board overview
+    // Reset to full board overview
     resetCameraToFullView(duration = 0.85) {
         this.camera.isZoomed = false;
         this.camera.scale = 1.0;
@@ -747,15 +747,17 @@ class OcaGameApp {
         }
     }
 
-    // Rule 6: Toggle camera between full out zoom and following chip
+    // Toggle camera between full overview and following active play
     toggleCameraZoom() {
         if (this.camera.isZoomed) {
-            this.followMyChip = false;
+            this.followAction = false;
             this.resetCameraToFullView(0.85);
         } else {
-            this.followMyChip = true;
-            const myPos = this.playerPositions[this.myId] ?? 0;
-            this.zoomInToToken(myPos, 0.85);
+            this.followAction = true;
+            const activePos = (this.activeMovingPlayerId && this.playerPositions[this.activeMovingPlayerId] !== undefined)
+                ? this.playerPositions[this.activeMovingPlayerId]
+                : (this.playerPositions[this.myId] ?? 0);
+            this.zoomInToToken(activePos, 0.85);
         }
     }
 
@@ -767,12 +769,14 @@ class OcaGameApp {
 
         if (this.camera.isZoomed) {
             pill.classList.add('active');
-            text.textContent = 'Vista Completa';
+            text.textContent = 'Ver Todo';
             if (icon) icon.textContent = '🗺️';
+            pill.title = 'Cambiar a Vista Completa del Tablero';
         } else {
             pill.classList.remove('active');
-            text.textContent = 'Seguir Mi Ficha';
+            text.textContent = 'Seguir';
             if (icon) icon.textContent = '🎯';
+            pill.title = 'Seguir la ficha en primer plano';
         }
     }
 
@@ -951,10 +955,15 @@ class OcaGameApp {
         this.playerPositions[event.player_id] = startPos;
         this.moveTokenTo(event.player_id, startPos);
 
-        // Rule 2: If it is my turn and followMyChip is enabled, ensure we are zoomed in to start_pos
-        if (isMyTurn && this.followMyChip && !this.camera.isZoomed) {
-            this.zoomInToToken(startPos, 0.7);
-            await this.sleep(300);
+        // Action Camera: If followAction is enabled, smoothly focus on the active player who is rolling!
+        if (this.followAction) {
+            if (!this.camera.isZoomed) {
+                this.zoomInToToken(startPos, 0.7);
+                await this.sleep(250);
+            } else {
+                this.softGlideToTile(startPos, 0.5);
+                await this.sleep(150);
+            }
         }
 
         // Animate 3D Dice Roll
@@ -964,7 +973,7 @@ class OcaGameApp {
         await this.sleep(700);
 
         // Token hops step by step sequentially along path
-        // Rule 5: Camera slowly and steadily tracks the chip on each step in a continuous flow
+        // Camera slowly and steadily tracks the chip on each step in a continuous flow
         const hopStepTime = 240; // ms per hop
         if (path.length > 0) {
             for (let i = 0; i < path.length; i++) {
@@ -975,7 +984,7 @@ class OcaGameApp {
 
                 if (window.ocaAudio) window.ocaAudio.playStep();
 
-                if (isMyTurn && this.camera.isZoomed) {
+                if (this.followAction && this.camera.isZoomed) {
                     this.trackStepWithCamera(stepPos, 0.24);
                 }
 
@@ -991,7 +1000,7 @@ class OcaGameApp {
             this.moveTokenTo(event.player_id, event.final_pos);
             this.highlightCard(event.final_pos);
 
-            if (isMyTurn && this.camera.isZoomed) {
+            if (this.followAction && this.camera.isZoomed) {
                 this.softGlideToTile(event.final_pos, 0.65);
             }
         } else {
@@ -1040,12 +1049,11 @@ class OcaGameApp {
         // Pause to let the user admire the landed card and read the rhyme!
         await this.sleep(1350);
 
-        // Rule 3: Once the turn is done, finish moving and don't have any more actions,
-        // zoom out to the full board and watch the others play!
-        // If event.extra_turn is true (e.g. Oca or Puente), stay zoomed in for next roll!
-        if (isMyTurn && !event.extra_turn && !event.is_win) {
+        // Keep camera zoomed in if following action so the board stays large & readable.
+        // Only return to full view if user manually turned off followAction!
+        if (!this.followAction && this.camera.isZoomed) {
             this.resetCameraToFullView(0.85);
-            await this.sleep(600);
+            await this.sleep(500);
         }
 
         this.activeMovingPlayerId = null;
@@ -1226,7 +1234,13 @@ class OcaGameApp {
         this.switchView('game-view');
         this.renderPlayerTokens();
         this.updateRoomStateUI();
-        this.resetCameraToFullView();
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile && this.followAction) {
+            const myPos = this.playerPositions[this.myId] ?? 0;
+            this.zoomInToToken(myPos, 0.6);
+        } else {
+            this.resetCameraToFullView();
+        }
     }
 
     updateRoomStateUI() {
@@ -1306,10 +1320,14 @@ class OcaGameApp {
         if (isMyTurn) {
             rollBtn.disabled = false;
 
-            // Rule 2: Zoom in to your chip when it is your turn!
-            if (this.followMyChip && !this.camera.isZoomed && !this.isAnimating && !this.isProcessingQueue) {
+            // When your turn starts, focus on your chip so you see your options clearly
+            if (this.followAction && !this.isAnimating && !this.isProcessingQueue) {
                 const myPos = this.playerPositions[this.myId] ?? currPlayer.position ?? 0;
-                this.zoomInToToken(myPos, 0.85);
+                if (!this.camera.isZoomed) {
+                    this.zoomInToToken(myPos, 0.85);
+                } else {
+                    this.softGlideToTile(myPos, 0.65);
+                }
             }
         } else {
             rollBtn.disabled = true;
