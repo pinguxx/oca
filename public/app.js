@@ -17,13 +17,14 @@ class OcaGameApp {
         this.selectedAvatar = '🪿';
         this.selectedColor = '#e63946';
 
-        // Camera & Pan/Zoom (Mobile starts with active zoom so tiles are large & crisp)
-        const isMobile = window.innerWidth <= 768;
+        // Cinematic Action Camera: Zooms into moving token, then zooms back out to full board
+        this.actionCameraEnabled = true;
+
         this.camera = {
             x: 0,
             y: 0,
-            scale: isMobile ? 1.85 : 1.0,
-            isZoomed: isMobile,
+            scale: 1.0, // Full Board Overview default
+            isZoomed: false,
             isDragging: false,
             startX: 0,
             startY: 0,
@@ -111,6 +112,8 @@ class OcaGameApp {
 
     renderMontecarloBoard() {
         this.renderCornerRosettes();
+        this.renderSpiralTrack();
+        this.renderCenterCourtArt();
         this.renderTilesCards();
         this.renderGranOcaGarden();
         this.renderPlayerTokens();
@@ -149,6 +152,113 @@ class OcaGameApp {
         });
     }
 
+    // Golden winding trail connecting all tiles 1..=63 into a single coherent spiral
+    renderSpiralTrack() {
+        const group = document.getElementById('svg-spiral-track');
+        if (!group || this.boardCoords.length === 0) return;
+        group.innerHTML = '';
+
+        let pathD = '';
+        for (let i = 1; i <= 63; i++) {
+            const coord = this.boardCoords[i];
+            if (!coord) continue;
+            pathD += (pathD === '' ? `M ${coord.x} ${coord.y}` : ` L ${coord.x} ${coord.y}`);
+        }
+
+        const pathBg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathBg.setAttribute('d', pathD);
+        pathBg.setAttribute('fill', 'none');
+        pathBg.setAttribute('stroke', '#ffd166');
+        pathBg.setAttribute('stroke-width', '18');
+        pathBg.setAttribute('stroke-opacity', '0.35');
+        pathBg.setAttribute('stroke-linecap', 'round');
+        pathBg.setAttribute('stroke-linejoin', 'round');
+
+        const pathLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathLine.setAttribute('d', pathD);
+        pathLine.setAttribute('fill', 'none');
+        pathLine.setAttribute('stroke', '#851e1e');
+        pathLine.setAttribute('stroke-width', '3');
+        pathLine.setAttribute('stroke-dasharray', '8 6');
+        pathLine.setAttribute('stroke-opacity', '0.45');
+        pathLine.setAttribute('stroke-linecap', 'round');
+
+        group.appendChild(pathBg);
+        group.appendChild(pathLine);
+    }
+
+    // Majestic Vintage Center Court Medallion (Center of Board)
+    renderCenterCourtArt() {
+        const group = document.getElementById('svg-center-court');
+        if (!group) return;
+        group.innerHTML = '';
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', 'translate(390, 350)');
+
+        let rays = '';
+        for (let i = 0; i < 24; i++) {
+            const ang = (i * 15) * Math.PI / 180;
+            const x1 = Math.cos(ang) * 22;
+            const y1 = Math.sin(ang) * 22;
+            const x2 = Math.cos(ang) * 120;
+            const y2 = Math.sin(ang) * 120;
+            rays += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#851e1e" stroke-width="2" stroke-dasharray="4 4" />`;
+        }
+
+        g.innerHTML = `
+            <!-- Vintage Card Base -->
+            <rect x="-175" y="-140" width="350" height="280" rx="16" fill="#fffef7" stroke="#851e1e" stroke-width="3" filter="url(#cardShadow)"/>
+            <rect x="-168" y="-133" width="336" height="266" rx="12" fill="none" stroke="#d4af37" stroke-width="2"/>
+            <rect x="-164" y="-129" width="328" height="258" rx="10" fill="none" stroke="rgba(133,30,30,0.18)" stroke-width="1"/>
+
+            <!-- Radiant Sunburst Pattern -->
+            <g opacity="0.22">
+                ${rays}
+            </g>
+
+            <!-- Rosette / Compass Rose Centerpiece -->
+            <circle cx="0" cy="10" r="54" fill="#fff9db" stroke="#851e1e" stroke-width="2.5"/>
+            <circle cx="0" cy="10" r="46" fill="#2a9d8f" stroke="#d4af37" stroke-width="1.5" opacity="0.85"/>
+            <circle cx="0" cy="10" r="32" fill="#851e1e"/>
+            <circle cx="0" cy="10" r="8" fill="#ffd166"/>
+
+            <!-- 8-Pointed Star (Rosa de los Vientos) -->
+            <polygon points="0,-34 7,3 0,10 -7,3" fill="#ffffff" transform="translate(0, 10)"/>
+            <polygon points="0,54 7,17 0,10 -7,17" fill="#ffffff" transform="translate(0, 10)"/>
+            <polygon points="44,10 7,17 0,10 7,3" fill="#ffffff" transform="translate(0, 10)"/>
+            <polygon points="-44,10 -7,17 0,10 -7,3" fill="#ffffff" transform="translate(0, 10)"/>
+            <polygon points="31,-21 4,3 0,10 7,10" fill="#ffd166" transform="translate(0, 10)"/>
+            <polygon points="-31,-21 -4,3 0,10 -7,10" fill="#ffd166" transform="translate(0, 10)"/>
+            <polygon points="31,41 4,17 0,10 7,10" fill="#ffd166" transform="translate(0, 10)"/>
+            <polygon points="-31,41 -4,17 0,10 -7,10" fill="#ffd166" transform="translate(0, 10)"/>
+
+            <text x="0" y="16" text-anchor="middle" font-size="20">🪿</text>
+
+            <!-- Header Curved Ribbon: EL JUEGO DE LA OCA -->
+            <path d="M -145,-86 Q 0,-110 145,-86 L 138,-56 Q 0,-78 -138,-56 Z" fill="#ffd166" stroke="#851e1e" stroke-width="2.2" filter="url(#cardShadow)"/>
+            <text x="0" y="-68" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-weight="900" font-size="16" fill="#851e1e" letter-spacing="1.5">EL JUEGO DE LA OCA</text>
+
+            <!-- Subtitle Ribbon -->
+            <rect x="-95" y="-52" width="190" height="20" rx="10" fill="#851e1e"/>
+            <text x="0" y="-38" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="700" font-size="10" fill="#ffd166" letter-spacing="1">EDICIÓN TRADICIONAL</text>
+
+            <!-- Motto Banner at Bottom -->
+            <path d="M -152,94 Q 0,82 152,94 L 144,120 Q 0,108 -144,120 Z" fill="#f8edeb" stroke="#851e1e" stroke-width="1.8"/>
+            <text x="0" y="110" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-style="italic" font-weight="700" font-size="11.5" fill="#851e1e">
+                «De oca a oca y tiro porque me toca»
+            </text>
+
+            <!-- Corner Stars -->
+            <text x="-152" y="-115" font-size="14" fill="#d90429">★</text>
+            <text x="140" y="-115" font-size="14" fill="#d90429">★</text>
+            <text x="-152" y="125" font-size="14" fill="#d90429">★</text>
+            <text x="140" y="125" font-size="14" fill="#d90429">★</text>
+        `;
+
+        group.appendChild(g);
+    }
+
     // Render Every Card-Tile (1 to 62)
     renderTilesCards() {
         const group = document.getElementById('svg-tiles-group');
@@ -177,18 +287,18 @@ class OcaGameApp {
 
             g.innerHTML = `
                 <!-- Card Container -->
-                <rect class="svg-card-rect" id="rect-card-${i}" x="${-cardW/2}" y="${-cardH/2}" width="${cardW}" height="${cardH}" rx="5" fill="${bgColor}"/>
-                <rect x="${-cardW/2 + 3}" y="${-cardH/2 + 3}" width="${cardW - 6}" height="${cardH - 6}" rx="3" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
-
-                <!-- Red Star Divider Accent -->
-                <polygon class="svg-star-divider" points="${cardW/2 - 2},${-cardH/2 + 2} ${cardW/2 + 2},${-cardH/2} ${cardW/2 - 1},${-cardH/2 + 6}" />
+                <rect class="svg-card-rect" id="rect-card-${i}" x="${-cardW/2}" y="${-cardH/2}" width="${cardW}" height="${cardH}" rx="6" fill="${bgColor}"/>
+                <rect x="${-cardW/2 + 2.5}" y="${-cardH/2 + 2.5}" width="${cardW - 5}" height="${cardH - 5}" rx="4" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>
 
                 <!-- Vintage Number Badge -->
-                <rect x="${-cardW/2 + 4}" y="${-cardH/2 + 4}" width="22" height="18" rx="4" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.2"/>
-                <text class="svg-card-num-text" x="${-cardW/2 + 15}" y="${-cardH/2 + 14}">${i}</text>
+                <circle cx="${-cardW/2 + 13}" cy="${-cardH/2 + 13}" r="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.2"/>
+                <text class="svg-card-num-text" x="${-cardW/2 + 13}" y="${-cardH/2 + 13}">${i}</text>
+
+                <!-- Corner Star Accent -->
+                <text x="${cardW/2 - 14}" y="${-cardH/2 + 14}" font-size="11" fill="#d90429" text-anchor="middle">★</text>
 
                 <!-- Illustrated Scene -->
-                <g transform="translate(6, 6)">
+                <g transform="translate(0, 4)">
                     ${drawing}
                 </g>
             `;
@@ -212,6 +322,7 @@ class OcaGameApp {
             <!-- Golden Card Base -->
             <rect x="-85" y="-95" width="170" height="190" rx="14" fill="#fff9db" stroke="#851e1e" stroke-width="3.5" filter="url(#cardShadow)"/>
             <rect x="-80" y="-90" width="160" height="180" rx="10" fill="none" stroke="#d4af37" stroke-width="2"/>
+            <rect x="-76" y="-86" width="152" height="172" rx="8" fill="none" stroke="rgba(133,30,30,0.2)" stroke-width="1"/>
 
             <!-- Curving Vintage Ribbon: 'JUEGO DE LA OCA' -->
             <path d="M -75,-65 Q 0,-85 75,-65 L 75,-35 Q 0,-55 -75,-35 Z" fill="#ffd166" stroke="#851e1e" stroke-width="2"/>
@@ -219,17 +330,17 @@ class OcaGameApp {
 
             <!-- Casilla 63 Number Circle -->
             <circle cx="0" cy="-14" r="18" fill="#d90429" stroke="#ffffff" stroke-width="2.5"/>
-            <text x="0" y="-9" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="18" fill="#ffffff">63</text>
+            <text x="0" y="-8" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="17" fill="#ffffff">63</text>
 
-            <!-- Illustrated Crowned Goose Artwork (Head & Wings) -->
+            <!-- Crowned Royal Goose -->
             <g transform="translate(0, 36)">
-                <!-- Golden Plumage / Crest -->
-                <path d="M-15,-25 Q-30,-45 0,-40 Q30,-45 15,-25 Z" fill="#ffd166" stroke="#851e1e" stroke-width="1.5"/>
-                <text x="0" y="-22" text-anchor="middle" font-size="18">👑</text>
-                <text x="0" y="15" text-anchor="middle" font-size="44">🦆</text>
+                <path d="M-20,-28 Q-35,-48 0,-42 Q35,-48 20,-28 Z" fill="#ffd166" stroke="#851e1e" stroke-width="1.8"/>
+                <text x="0" y="-22" text-anchor="middle" font-size="20">👑</text>
+                <text x="0" y="16" text-anchor="middle" font-size="46">🦆</text>
             </g>
 
-            <text x="0" y="78" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="11" fill="#851e1e" letter-spacing="1">¡VICTORIA!</text>
+            <rect x="-55" y="70" width="110" height="20" rx="6" fill="#851e1e"/>
+            <text x="0" y="84" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="11" fill="#ffd166" letter-spacing="1">¡VICTORIA!</text>
         `;
 
         group.appendChild(g);
@@ -277,99 +388,114 @@ class OcaGameApp {
         // Special Tiles
         if (type === 'oca') {
             return `
-                <text x="0" y="8" text-anchor="middle" font-size="28">🦆</text>
-                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#2a9d8f">OCA</text>
+                <path d="M-22,13 Q-11,9 0,13 Q11,17 22,13" fill="none" stroke="#2a9d8f" stroke-width="1.8"/>
+                <path d="M-18,17 Q-9,14 0,17 Q9,20 18,17" fill="none" stroke="#457b9d" stroke-width="1.2" opacity="0.6"/>
+                <text x="0" y="8" text-anchor="middle" font-size="24">🦆</text>
+                <rect x="-24" y="16" width="48" height="13" rx="3" fill="#2a9d8f" stroke="#1b4332" stroke-width="0.8"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8.5" fill="#ffffff">★ OCA ★</text>
             `;
         }
         if (type === 'puente') {
             return `
-                <text x="0" y="8" text-anchor="middle" font-size="26">🌉</text>
-                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#457b9d">PUENTE</text>
+                <path d="M-24,13 Q-12,8 0,13 Q12,18 24,13" fill="none" stroke="#0077b6" stroke-width="2"/>
+                <text x="0" y="7" text-anchor="middle" font-size="22">🌉</text>
+                <rect x="-26" y="16" width="52" height="13" rx="3" fill="#0077b6" stroke="#03045e" stroke-width="0.8"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">PUENTE</text>
             `;
         }
         if (type === 'dados') {
             return `
-                <text x="0" y="8" text-anchor="middle" font-size="24">🎲</text>
-                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#9b5de5">DADOS</text>
+                <text x="0" y="7" text-anchor="middle" font-size="22">🎲</text>
+                <rect x="-24" y="16" width="48" height="13" rx="3" fill="#7209b7" stroke="#3a0ca3" stroke-width="0.8"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">DADOS</text>
             `;
         }
         if (type === 'posada') {
             return `
-                <text x="0" y="8" text-anchor="middle" font-size="26">🏨</text>
-                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#e76f51">POSADA</text>
+                <text x="0" y="7" text-anchor="middle" font-size="22">🏨</text>
+                <rect x="-26" y="16" width="52" height="13" rx="3" fill="#e76f51" stroke="#9d0208" stroke-width="0.8"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">POSADA</text>
             `;
         }
         if (type === 'pozo') {
             return `
-                <text x="0" y="8" text-anchor="middle" font-size="26">🕳️</text>
-                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#52796f">POZO</text>
+                <text x="0" y="7" text-anchor="middle" font-size="22">🕳️</text>
+                <rect x="-24" y="16" width="48" height="13" rx="3" fill="#52796f" stroke="#2f3e46" stroke-width="0.8"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">POZO</text>
             `;
         }
         if (type === 'laberinto') {
             return `
-                <text x="0" y="8" text-anchor="middle" font-size="26">🌀</text>
-                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8.5" fill="#0077b6">LABERINTO</text>
+                <text x="0" y="7" text-anchor="middle" font-size="22">🌀</text>
+                <rect x="-28" y="16" width="56" height="13" rx="3" fill="#023e8a" stroke="#03045e" stroke-width="0.8"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7.5" fill="#ffffff">LABERINTO</text>
             `;
         }
         if (type === 'carcel') {
             return `
-                <text x="0" y="8" text-anchor="middle" font-size="26">⛓️</text>
-                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#4a4e69">CÁRCEL</text>
+                <text x="0" y="7" text-anchor="middle" font-size="22">⛓️</text>
+                <rect x="-26" y="16" width="52" height="13" rx="3" fill="#4a4e69" stroke="#22223b" stroke-width="0.8"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">CÁRCEL</text>
             `;
         }
         if (type === 'muerte') {
             return `
-                <text x="0" y="8" text-anchor="middle" font-size="28">💀</text>
-                <text x="0" y="22" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="9" fill="#c1121f">MUERTE</text>
+                <text x="0" y="7" text-anchor="middle" font-size="24">💀</text>
+                <rect x="-26" y="16" width="52" height="13" rx="3" fill="#c1121f" stroke="#780000" stroke-width="0.8"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">MUERTE</text>
             `;
         }
 
-        // Classic Montecarlo Board Motifs
+        // Classic Montecarlo Board Motifs with labels
         const motifs = {
-            1: '⛲',  // Fuente
-            2: '🍇',  // Frutas
-            3: '🚶',  // Niños paseando
-            4: '🏊',  // Nadador
-            7: '🔨',  // Herrero
-            8: '🤠',  // Charro campesino
-            10: '🎨', // Pintor
-            11: '🎸', // Músicos mariachi
-            13: '🚂', // Tren de vapor
-            15: '🎹', // Pianista
-            16: '💃', // Danza folclórica
-            17: '🛶', // Góndola / lago
-            20: '🐂', // Torero
-            21: '🎭', // Arlequín
-            22: '🐎', // Charrería
-            24: '👨‍🍳', // Chef
-            25: '🏰', // Fortaleza
-            28: '🏛️', // Pirámide maya
-            29: '⛺', // Campamento
-            30: '🌴', // Palmeras oasis
-            33: '🎣', // Pescador
-            34: '🏃', // Corredor
-            35: '🤸', // Gimnasta
-            37: '🏇', // Jinete
-            38: '🛸', // Dirigible
-            39: '🥊', // Boxeador
-            40: '🐃', // Toro bravo
-            43: '⛵', // Velero
-            44: '🎈', // Globo aerostático
-            46: '⛷️', // Esquiador
-            47: '🏊‍♂️', // Clavadista
-            48: '🎪', // Bufón circo
-            49: '⛹️', // Trampolín
-            51: '⚒️', // Forja
-            55: '🏝️', // Isla
-            56: '🛩️', // Biplano
-            57: '🚢', // Barco de vapor
-            60: '🤼', // Lucha libre
-            61: '🚴', // Ciclista
-            62: '⚾', // Beisbolista
+            1: { icon: '⛲', label: 'FUENTE' },
+            2: { icon: '🍇', label: 'FRUTAS' },
+            3: { icon: '🚶', label: 'PASEO' },
+            4: { icon: '🏊', label: 'LAGO' },
+            7: { icon: '🔨', label: 'FORJA' },
+            8: { icon: '🤠', label: 'CHARRO' },
+            10: { icon: '🎨', label: 'PINTOR' },
+            11: { icon: '🎸', label: 'MARIACHI' },
+            13: { icon: '🚂', label: 'TREN' },
+            15: { icon: '🎹', label: 'PIANO' },
+            16: { icon: '💃', label: 'JARABE' },
+            17: { icon: '🛶', label: 'TRAJINERA' },
+            20: { icon: '🐂', label: 'TORO' },
+            21: { icon: '🎭', label: 'TEATRO' },
+            22: { icon: '🐎', label: 'CORCEL' },
+            24: { icon: '👨‍🍳', label: 'FESTÍN' },
+            25: { icon: '🏰', label: 'CASTILLO' },
+            28: { icon: '🏛️', label: 'PIRÁMIDE' },
+            29: { icon: '⛺', label: 'SIERRA' },
+            30: { icon: '🌴', label: 'PALMAR' },
+            33: { icon: '🎣', label: 'PESCA' },
+            34: { icon: '🏃', label: 'ATLETA' },
+            35: { icon: '🤸', label: 'ACRÓBATA' },
+            37: { icon: '🏇', label: 'JINETE' },
+            38: { icon: '🛸', label: 'DIRIGIBLE' },
+            39: { icon: '🥊', label: 'BOXEO' },
+            40: { icon: '🐃', label: 'RANCHO' },
+            43: { icon: '⛵', label: 'VELERO' },
+            44: { icon: '🎈', label: 'GLOBO' },
+            46: { icon: '⛷️', label: 'NIEVE' },
+            47: { icon: '🏊‍♂️', label: 'CLAVADOS' },
+            48: { icon: '🎪', label: 'CIRCO' },
+            49: { icon: '⛹️', label: 'CANCHA' },
+            51: { icon: '⚒️', label: 'MINERO' },
+            55: { icon: '🏝️', label: 'ISLA' },
+            56: { icon: '🛩️', label: 'AVIONETA' },
+            57: { icon: '🚢', label: 'VAPOR' },
+            60: { icon: '🤼', label: 'LUCHA' },
+            61: { icon: '🚴', label: 'CICLISMO' },
+            62: { icon: '⚾', label: 'BÉISBOL' },
         };
 
-        const icon = motifs[num] || '⭐';
-        return `<text x="0" y="10" text-anchor="middle" font-size="24">${icon}</text>`;
+        const item = motifs[num] || { icon: '⭐', label: `PASO ${num}` };
+        return `
+            <circle cx="0" cy="5" r="17" fill="#ffffff" stroke="#d4af37" stroke-width="1.2" opacity="0.9"/>
+            <text x="0" y="11" text-anchor="middle" font-size="18">${item.icon}</text>
+            <text x="0" y="26" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="800" font-size="7.5" fill="#4a3525" letter-spacing="0.3">${item.label}</text>
+        `;
     }
 
     renderPlayerTokens() {
@@ -480,6 +606,18 @@ class OcaGameApp {
         }, { passive: true });
 
         // Camera Buttons
+        const btnAuto = document.getElementById('btn-camera-auto');
+        if (btnAuto) {
+            btnAuto.addEventListener('click', () => {
+                this.actionCameraEnabled = !this.actionCameraEnabled;
+                btnAuto.classList.toggle('active', this.actionCameraEnabled);
+                const txt = document.getElementById('cam-auto-text');
+                if (txt) {
+                    txt.textContent = this.actionCameraEnabled ? 'Acción: ON' : 'Acción: OFF';
+                }
+            });
+        }
+
         const btnToggle = document.getElementById('btn-camera-toggle');
         if (btnToggle) {
             btnToggle.addEventListener('click', () => this.toggleCameraZoom());
@@ -719,39 +857,56 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 5. GAME FLOW & CALM TOKEN ANIMATIONS (ZERO DIZZINESS)
+    // 5. GAME FLOW & CINEMATIC ACTION CAMERA
     // ========================================================
     async handleTurnEvent(event) {
         this.isAnimating = true;
         const rollBtn = document.getElementById('btn-roll-dice');
         if (rollBtn) rollBtn.disabled = true;
 
-        // 1. Animate Dice Roll (camera stays calm and still)
+        const path = event.path || [];
+        const startPos = path.length > 0 ? path[0] : event.final_pos;
+
+        // 1. ACTION CAMERA: Smoothly Zoom IN to starting token!
+        if (this.actionCameraEnabled) {
+            const isMobile = window.innerWidth <= 768;
+            this.camera.scale = isMobile ? 1.95 : 1.7;
+            this.camera.isZoomed = true;
+            this.updateCameraPillText();
+            this.softGlideToTile(startPos);
+        }
+
+        // 2. Animate 3D Dice Roll
         this.animateDiceRoll(event.dice, event.total);
         if (window.ocaAudio) window.ocaAudio.playDiceRoll();
 
-        await this.sleep(750);
+        await this.sleep(700);
 
-        // 2. Token hops smoothly along the path - NO CAMERA JITTER!
-        if (event.path && event.path.length > 0) {
-            for (let i = 0; i < event.path.length; i++) {
-                const stepPos = event.path[i];
+        // 3. Token hops step by step - clear and large in zoomed view!
+        if (path.length > 0) {
+            for (let i = 0; i < path.length; i++) {
+                const stepPos = path[i];
                 this.moveTokenTo(event.player_id, stepPos);
-
-                // Highlight card gently without moving camera
                 this.highlightCard(stepPos);
 
                 if (window.ocaAudio) window.ocaAudio.playStep();
+
+                // Gentle midway catch-up if path is long
+                if (this.actionCameraEnabled && path.length > 5 && i === Math.floor(path.length / 2)) {
+                    this.softGlideToTile(stepPos);
+                }
+
                 await this.sleep(220);
             }
         }
 
-        // 3. Optional soft glide only after entire move completes, if user zoomed in
-        if (this.camera.isZoomed) {
+        // 4. Focus on landed tile
+        this.highlightCard(event.final_pos);
+        if (this.actionCameraEnabled || this.camera.isZoomed) {
             this.softGlideToTile(event.final_pos);
         }
 
-        // 4. Handle Special Tile Triggers & Rhymes
+        // 5. Special Tile Triggers & Rhymes
         if (event.rhyme) {
             this.showRhymeBanner(event.tile_type, event.rhyme);
         }
@@ -778,14 +933,23 @@ class OcaGameApp {
             }
         }
 
-        // 5. Log & Radar update
+        // 6. Log & Radar update
         this.addLogEntry(event);
         this.updateRaceRadar();
 
-        // 6. Handle Win
+        // 7. Handle Win
         if (event.is_win) {
             this.showVictoryModal(event.player_name);
             this.startConfetti();
+        }
+
+        // 8. PAUSE to let the user admire the landed card and read the rhyme!
+        await this.sleep(1350);
+
+        // 9. ACTION CAMERA: Smoothly Zoom OUT to full board overview!
+        if (this.actionCameraEnabled && !event.is_win) {
+            this.resetCameraToFullView();
+            await this.sleep(600);
         }
 
         this.isAnimating = false;
@@ -965,18 +1129,7 @@ class OcaGameApp {
         this.switchView('game-view');
         this.renderPlayerTokens();
         this.updateRoomStateUI();
-
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
-            this.camera.scale = 1.85;
-            this.camera.isZoomed = true;
-            this.updateCameraPillText();
-            setTimeout(() => {
-                this.centerOnMyToken();
-            }, 100);
-        } else {
-            this.resetCameraToFullView();
-        }
+        this.resetCameraToFullView();
     }
 
     updateRoomStateUI() {
