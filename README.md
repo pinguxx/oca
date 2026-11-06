@@ -19,6 +19,9 @@ Forma parte de la colección de juegos tradicionales clásicos junto a **Loterí
   * 💀 **La Muerte (58):** Vuelves al inicio: casilla 1.
   * 🏆 **Gran Jardín de la Oca (63):** Llegada con número exacto o **rebote hacia atrás**.
   * 🎯 **Regla Clásica del 9 Inicial:** 5+4 te lleva a los Dados (53); 6+3 te lleva a los Dados (26).
+* ⏱️ **Temporizador de Turno y Protección AFK:** Configurable (15s, 20s recomendado, 30s o sin límite manual). Si un jugador se ausenta, el servidor tira automáticamente para mantener la partida activa y fluida.
+* 🔄 **Persistencia de Sesión y Reconexión Automática:** Si recargas el navegador o pierdes la conexión momentáneamente, te reconectas de inmediato a tu sala y conservas tu turno y ficha.
+* 🎲 **Dados 3D Optimizados para Móviles:** Rotación 3D realista con acabado nítido sin bordes ni artefactos en Android o iOS.
 * 🌐 **Multijugador en Tiempo Real:** Salas privadas con código de 4 letras y código QR para unirse desde el celular.
 * 🤖 **Modo Solitario con Bots IA:** Juega contra *Don Ganso*, *Oca Veloz*, *Gansito*, *Doña Plumas*, etc.
 * 🎵 **Efectos de Sonido WebAudio API:** Dados, graznidos de oca (*honk!*), agua en el puente, fanfarria triunfal mexicana, sin necesidad de archivos de audio pesados.

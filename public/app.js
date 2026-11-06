@@ -67,6 +67,19 @@ class OcaGameApp {
             this.switchTab('tab-join', 'panel-join');
         }
 
+        // Restore stored player name if available
+        const stored = this.getStoredSession();
+        if (stored && stored.playerName) {
+            const nameInput = document.getElementById('player-name-input');
+            if (nameInput) nameInput.value = stored.playerName;
+        }
+
+        // Initialize dice in settled state without seam artifacts
+        const c1 = document.getElementById('cube-die-1');
+        const c2 = document.getElementById('cube-die-2');
+        if (c1) this.markDiceSettled(c1, 1);
+        if (c2) this.markDiceSettled(c2, 1);
+
         this.connectWebSocket();
     }
 
@@ -878,8 +891,129 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 3. WEBSOCKET CONNECTION
+    // 3. WEBSOCKET CONNECTION & SESSION RECONNECTION
     // ========================================================
+    saveSession() {
+        if (!this.room || !this.myId) return;
+        const myPlayer = this.room.players?.find(p => p.id === this.myId);
+        const session = {
+            roomCode: this.room.code,
+            playerId: this.myId,
+            playerName: myPlayer ? myPlayer.name : '',
+            avatar: myPlayer ? myPlayer.avatar : this.selectedAvatar,
+            color: myPlayer ? myPlayer.color : this.selectedColor
+        };
+        try {
+            localStorage.setItem('oca_session', JSON.stringify(session));
+        } catch (e) {
+            console.warn('Could not save session', e);
+        }
+    }
+
+    getStoredSession() {
+        try {
+            const raw = localStorage.getItem('oca_session');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    clearSession() {
+        try {
+            localStorage.removeItem('oca_session');
+        } catch (e) {}
+    }
+
+    showToast(message, duration = 3000) {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.style.cssText = `
+                position: fixed;
+                bottom: 24px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 99999;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                pointer-events: none;
+                max-width: 90vw;
+            `;
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast-bubble';
+        toast.style.cssText = `
+            background: rgba(15, 23, 42, 0.95);
+            color: #ffffff;
+            border: 1px solid #d4af37;
+            border-radius: 20px;
+            padding: 8px 18px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+            text-align: center;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.25s ease;
+            pointer-events: auto;
+        `;
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        });
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(10px)';
+            setTimeout(() => toast.remove(), 250);
+        }, duration);
+    }
+
+    updateTurnTimerDisplay() {
+        const timerBtn = document.getElementById('btn-turn-timer');
+        if (!timerBtn || !this.room) return;
+
+        if (this.turnTimerTicker) {
+            clearInterval(this.turnTimerTicker);
+            this.turnTimerTicker = null;
+        }
+
+        const timerSecs = this.room.settings?.turn_timer_seconds ?? 20;
+        if (timerSecs <= 0) {
+            timerBtn.textContent = '♾️ Sin límite';
+            timerBtn.classList.remove('timer-urgent');
+            timerBtn.title = this.isHost
+                ? 'Modo sin límite de tiempo. Clic para activar 15s.'
+                : 'Partida sin límite de tiempo por turno.';
+            return;
+        }
+
+        const turnStartedAt = this.room.turn_started_at || Math.floor(Date.now() / 1000);
+        const updateTick = () => {
+            const now = Math.floor(Date.now() / 1000);
+            const elapsed = Math.max(0, now - turnStartedAt);
+            const remaining = Math.max(0, timerSecs - elapsed);
+
+            timerBtn.textContent = `⏱️ ${remaining}s`;
+            if (remaining <= 5) {
+                timerBtn.classList.add('timer-urgent');
+            } else {
+                timerBtn.classList.remove('timer-urgent');
+            }
+        };
+
+        updateTick();
+        this.turnTimerTicker = setInterval(updateTick, 1000);
+    }
+
     connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -894,6 +1028,20 @@ class OcaGameApp {
                     this.send({ action: 'ping' });
                 }
             }, 30000);
+
+            // Auto-reconnect if session exists
+            const session = this.getStoredSession();
+            if (session && session.roomCode && session.playerId) {
+                this.showToast(`🔄 Reconectando a la sala ${session.roomCode}...`);
+                this.send({
+                    action: 'join_room',
+                    room_code: session.roomCode,
+                    player_name: session.playerName,
+                    player_id: session.playerId,
+                    avatar: session.avatar,
+                    color: session.color
+                });
+            }
         };
 
         this.ws.onmessage = (event) => {
@@ -926,6 +1074,7 @@ class OcaGameApp {
                 this.myId = data.my_id;
                 this.isHost = true;
                 this.room = data.room;
+                this.saveSession();
                 this.showWaitingLobby();
                 break;
 
@@ -933,7 +1082,16 @@ class OcaGameApp {
                 this.myId = data.my_id;
                 this.room = data.room;
                 this.isHost = (this.room.host_id === this.myId);
-                this.showWaitingLobby();
+                this.saveSession();
+                if (this.room.status === 'playing') {
+                    this.showGameView();
+                    this.updateRoomStateUI();
+                    if (data.is_reconnect) {
+                        this.showToast('✅ ¡Reconectado a la partida!');
+                    }
+                } else {
+                    this.showWaitingLobby();
+                }
                 break;
 
             case 'room_state':
@@ -951,12 +1109,28 @@ class OcaGameApp {
                 this.enqueueTurnEvent(data.event);
                 break;
 
+            case 'turn_played':
+                if (data.room) {
+                    this.room = data.room;
+                    this.updateRoomStateUI();
+                }
+                if (data.event) {
+                    if (data.was_timeout) {
+                        this.showToast(`⏱️ Tiempo agotado: se tiró automáticamente para ${data.event.player_name}`);
+                    }
+                    this.enqueueTurnEvent(data.event);
+                }
+                break;
+
             case 'chat_message':
                 this.addChatMessage(data.chat);
                 break;
 
             case 'error':
-                alert(data.message);
+                if (data.message && (data.message.includes('no encontrada') || data.message.includes('llena'))) {
+                    this.clearSession();
+                }
+                this.showToast('⚠️ ' + data.message);
                 break;
 
             case 'pong':
@@ -1122,14 +1296,33 @@ class OcaGameApp {
         }
     }
 
+    markDiceSettled(cubeEl, value) {
+        if (!cubeEl) return;
+        cubeEl.classList.add('is-settled');
+        cubeEl.setAttribute('data-face', value);
+        cubeEl.querySelectorAll('.cube-face').forEach(face => {
+            if (face.classList.contains(`face-${value}`)) {
+                face.classList.add('active-face');
+            } else {
+                face.classList.remove('active-face');
+            }
+        });
+    }
+
     animateDiceRoll(dice, total) {
         const c1 = document.getElementById('cube-die-1');
         const c2 = document.getElementById('cube-die-2');
         const totalDisplay = document.getElementById('dice-total-num');
 
-        if (c1) c1.classList.add('rolling');
+        if (c1) {
+            c1.classList.remove('is-settled');
+            c1.removeAttribute('data-face');
+            c1.classList.add('rolling');
+        }
         if (c2 && dice.length > 1 && dice[1] > 0) {
             c2.style.display = 'block';
+            c2.classList.remove('is-settled');
+            c2.removeAttribute('data-face');
             c2.classList.add('rolling');
         } else if (c2 && (dice.length <= 1 || dice[1] === 0)) {
             c2.style.display = 'none';
@@ -1138,11 +1331,15 @@ class OcaGameApp {
         setTimeout(() => {
             if (c1) {
                 c1.classList.remove('rolling');
-                this.setDiceRotation(c1, dice[0] || 1);
+                const v1 = dice[0] || 1;
+                this.setDiceRotation(c1, v1);
+                this.markDiceSettled(c1, v1);
             }
             if (c2 && dice.length > 1 && dice[1] > 0) {
                 c2.classList.remove('rolling');
-                this.setDiceRotation(c2, dice[1] || 1);
+                const v2 = dice[1] || 1;
+                this.setDiceRotation(c2, v2);
+                this.markDiceSettled(c2, v2);
             }
             if (totalDisplay) {
                 totalDisplay.textContent = total;
@@ -1160,6 +1357,13 @@ class OcaGameApp {
             6: "rotateX(90deg) rotateY(0deg)"
         };
         cubeEl.style.transform = rotations[value] || rotations[1];
+        cubeEl.querySelectorAll('.cube-face').forEach(face => {
+            if (face.classList.contains(`face-${value}`)) {
+                face.classList.add('active-face');
+            } else {
+                face.classList.remove('active-face');
+            }
+        });
     }
 
     moveTokenTo(playerId, tileNum) {
@@ -1310,6 +1514,8 @@ class OcaGameApp {
             return;
         }
 
+        this.updateTurnTimerDisplay();
+
         const currPlayer = this.room.players[this.room.current_turn];
         if (currPlayer) {
             document.getElementById('turn-avatar').textContent = currPlayer.avatar;
@@ -1426,6 +1632,23 @@ class OcaGameApp {
         modal.classList.remove('hidden');
     }
 
+    requirePlayerName() {
+        const input = document.getElementById('player-name-input');
+        const name = input ? input.value.trim() : '';
+        if (!name) {
+            if (input) {
+                input.classList.remove('input-shake-error');
+                void input.offsetWidth;
+                input.classList.add('input-shake-error');
+                input.focus();
+                setTimeout(() => input.classList.remove('input-shake-error'), 500);
+            }
+            this.showToast('⚠️ Por favor escribe tu nombre o apodo antes de continuar');
+            return null;
+        }
+        return name;
+    }
+
     // ========================================================
     // 7. EVENT LISTENERS
     // ========================================================
@@ -1464,22 +1687,29 @@ class OcaGameApp {
         });
 
         document.getElementById('btn-create-room').addEventListener('click', () => {
-            const name = document.getElementById('player-name-input').value.trim() || 'Jugador 1';
+            const name = this.requirePlayerName();
+            if (!name) return;
             const twoDice = document.getElementById('chk-two-dice').checked;
+            const timerSel = document.getElementById('sel-turn-timer');
+            const timerVal = timerSel ? parseInt(timerSel.value, 10) : 20;
             this.send({
                 action: 'create_room',
                 player_name: name,
                 color: this.selectedColor,
                 avatar: this.selectedAvatar,
-                two_dice: twoDice
+                two_dice: twoDice,
+                turn_timer_seconds: isNaN(timerVal) ? 20 : timerVal
             });
         });
 
         document.getElementById('btn-join-room').addEventListener('click', () => {
-            const code = document.getElementById('join-code-input').value.trim().toUpperCase();
-            const name = document.getElementById('player-name-input').value.trim() || 'Jugador';
+            const name = this.requirePlayerName();
+            if (!name) return;
+            const codeInput = document.getElementById('join-code-input');
+            const code = codeInput.value.trim().toUpperCase();
             if (!code) {
-                alert('Por favor introduce el código de la sala');
+                this.showToast('⚠️ Introduce el código de la sala');
+                codeInput.focus();
                 return;
             }
             this.send({
@@ -1492,13 +1722,15 @@ class OcaGameApp {
         });
 
         document.getElementById('btn-quick-solo').addEventListener('click', () => {
-            const name = document.getElementById('player-name-input').value.trim() || 'Jugador 1';
+            const name = this.requirePlayerName();
+            if (!name) return;
             this.send({
                 action: 'create_room',
                 player_name: name,
                 color: this.selectedColor,
                 avatar: this.selectedAvatar,
-                two_dice: true
+                two_dice: true,
+                turn_timer_seconds: 20
             });
             setTimeout(() => {
                 this.send({ action: 'add_bot' });
@@ -1521,6 +1753,17 @@ class OcaGameApp {
             this.send({ action: 'roll_dice' });
         });
 
+        const timerBtn = document.getElementById('btn-turn-timer');
+        if (timerBtn) {
+            timerBtn.addEventListener('click', () => {
+                if (!this.isHost) {
+                    this.showToast('ℹ️ Solo el anfitrión puede alternar el temporizador.');
+                    return;
+                }
+                this.send({ action: 'toggle_timer' });
+            });
+        }
+
         const diceStage = document.getElementById('dice-container-box');
         if (diceStage) {
             diceStage.addEventListener('click', () => {
@@ -1535,10 +1778,10 @@ class OcaGameApp {
             if (!this.room) return;
             const url = `${window.location.origin}${window.location.pathname}?room=${this.room.code}`;
             navigator.clipboard.writeText(url).then(() => {
-                alert('¡Enlace de sala copiado al portapapeles!');
+                this.showToast('📋 ¡Enlace de sala copiado al portapapeles!');
             }).catch(() => {
                 navigator.clipboard.writeText(this.room.code);
-                alert(`¡Código ${this.room.code} copiado!`);
+                this.showToast(`📋 ¡Código ${this.room.code} copiado!`);
             });
         });
 
@@ -1581,7 +1824,8 @@ class OcaGameApp {
 
         document.getElementById('btn-leave').addEventListener('click', () => {
             if (confirm('¿Deseas salir de la sala actual?')) {
-                window.location.reload();
+                this.clearSession();
+                window.location.href = window.location.pathname;
             }
         });
 
@@ -1590,7 +1834,8 @@ class OcaGameApp {
             this.send({ action: 'restart_game' });
         });
         document.getElementById('btn-victory-back-lobby').addEventListener('click', () => {
-            window.location.reload();
+            this.clearSession();
+            window.location.href = window.location.pathname;
         });
     }
 

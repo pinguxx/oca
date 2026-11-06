@@ -316,6 +316,18 @@ body {
   border-color: var(--color-gold);
 }
 
+.text-input.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35) !important;
+  animation: inputShake 0.4s ease;
+}
+
+@keyframes inputShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
 .text-code {
   font-family: monospace;
   font-size: 1.3rem;
@@ -716,6 +728,13 @@ body {
     font-size: 0.72rem;
   }
 
+  .turn-timer-pill {
+    padding: 3px 8px;
+    font-size: 0.72rem;
+  }
+    font-size: 0.72rem;
+  }
+
   .race-radar-bar {
     margin: 3px 0 5px 0;
     padding: 4px 8px;
@@ -746,6 +765,23 @@ body {
     padding: 2px !important;
     flex-shrink: 0 !important;
   }
+
+  .cube-die {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .cube-face {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 8px !important;
+    padding: 4px !important;
+  }
+  .face-1 { transform: translateZ(22px) !important; }
+  .face-2 { transform: rotateY(180deg) translateZ(22px) !important; }
+  .face-3 { transform: rotateY(-90deg) translateZ(22px) !important; }
+  .face-4 { transform: rotateY(90deg) translateZ(22px) !important; }
+  .face-5 { transform: rotateX(90deg) translateZ(22px) !important; }
+  .face-6 { transform: rotateX(-90deg) translateZ(22px) !important; }
 
   .dice-total-display {
     font-size: 0.85rem !important;
@@ -818,8 +854,55 @@ body {
   color: var(--text-bright);
 }
 
-.turn-status-badge {
+.turn-timer-pill {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-left: auto;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.turn-timer-pill:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #fbbf24;
+  transform: scale(1.03);
+}
+
+.turn-timer-pill.timer-urgent {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fca5a5;
+  animation: timerPulse 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes timerPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  100% { transform: scale(1.06); box-shadow: 0 0 8px 3px rgba(239, 68, 68, 0.6); }
+}
+
+.input-shake-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.4) !important;
+  animation: shakeInput 0.4s ease-in-out;
+}
+
+@keyframes shakeInput {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.turn-status-badge {
   font-size: 0.82rem;
   font-weight: 600;
   background: rgba(255, 183, 3, 0.15);
@@ -1125,18 +1208,37 @@ body {
 }
 
 .cube-die {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   position: relative;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
   transform: rotateX(0deg) rotateY(0deg);
   transition: transform 0.65s cubic-bezier(0.2, 0.8, 0.3, 1);
   flex-shrink: 0;
+  background: transparent;
 }
 
 .cube-die.rolling {
   animation: rollAnimation 0.6s infinite linear;
+}
+
+.cube-die.rolling .cube-face {
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Eliminate white edge lines, seams and polygon bleeding at rest on mobile & desktop:
+   When die is resting at face N, hide all other perpendicular faces that bleed through corners */
+.cube-die:not(.rolling)[data-face="1"] .cube-face:not(.face-1),
+.cube-die:not(.rolling)[data-face="2"] .cube-face:not(.face-2),
+.cube-die:not(.rolling)[data-face="3"] .cube-face:not(.face-3),
+.cube-die:not(.rolling)[data-face="4"] .cube-face:not(.face-4),
+.cube-die:not(.rolling)[data-face="5"] .cube-face:not(.face-5),
+.cube-die:not(.rolling)[data-face="6"] .cube-face:not(.face-6),
+.cube-die.is-settled .cube-face:not(.active-face) {
+  display: none !important;
 }
 
 @keyframes rollAnimation {
@@ -1147,36 +1249,35 @@ body {
 
 .cube-face {
   position: absolute;
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   box-sizing: border-box;
-  background: #ffffff;
-  border: 1.2px solid #cbd5e1;
-  border-radius: 6px;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #f8fafc 65%, #e2e8f0 100%);
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
   display: grid;
   padding: 5px;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  outline: 1px solid transparent;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.95), inset 0 -1px 2px rgba(0, 0, 0, 0.08);
 }
 
-/* 6 Faces Rotations - translateZ exactly half face size (24px) */
+/* 6 Faces Rotations - translateZ exactly half face size (23px) */
 .face-1 { 
-  transform: translateZ(24px); 
+  transform: translateZ(23px); 
   display: flex; 
   align-items: center; 
   justify-content: center; 
 }
 .face-2 { 
-  transform: rotateY(180deg) translateZ(24px); 
+  transform: rotateY(180deg) translateZ(23px); 
   display: flex; 
   justify-content: space-between; 
 }
 .face-2 .pip:last-child { align-self: flex-end; }
 
 .face-3 { 
-  transform: rotateY(-90deg) translateZ(24px); 
+  transform: rotateY(-90deg) translateZ(23px); 
   display: flex; 
   justify-content: space-between; 
 }
@@ -1184,7 +1285,7 @@ body {
 .face-3 .pip:last-child { align-self: flex-end; }
 
 .face-4 { 
-  transform: rotateY(90deg) translateZ(24px); 
+  transform: rotateY(90deg) translateZ(23px); 
   grid-template-columns: 1fr 1fr; 
   grid-template-rows: 1fr 1fr; 
   align-items: center; 
@@ -1192,7 +1293,7 @@ body {
 }
 
 .face-5 { 
-  transform: rotateX(90deg) translateZ(24px); 
+  transform: rotateX(90deg) translateZ(23px); 
   display: grid; 
   grid-template-columns: 1fr 1fr 1fr; 
   grid-template-rows: 1fr 1fr 1fr; 
@@ -1206,7 +1307,7 @@ body {
 .face-5 .pip:nth-child(5) { grid-area: 3 / 3; }
 
 .face-6 { 
-  transform: rotateX(-90deg) translateZ(24px); 
+  transform: rotateX(-90deg) translateZ(23px); 
   display: grid; 
   grid-template-columns: 1fr 1fr; 
   grid-template-rows: 1fr 1fr 1fr; 

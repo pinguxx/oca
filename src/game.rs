@@ -71,6 +71,12 @@ pub struct RoomSettings {
     pub two_dice: bool,
     pub exact_bounce: bool,
     pub well_rescue: bool,
+    #[serde(default = "default_turn_timer")]
+    pub turn_timer_seconds: u64,
+}
+
+fn default_turn_timer() -> u64 {
+    20
 }
 
 impl Default for RoomSettings {
@@ -79,6 +85,7 @@ impl Default for RoomSettings {
             two_dice: true,
             exact_bounce: true,
             well_rescue: true,
+            turn_timer_seconds: default_turn_timer(),
         }
     }
 }
@@ -125,21 +132,45 @@ pub struct GameRoom {
     pub settings: RoomSettings,
     pub created_at: u64,
     pub last_activity: u64,
+    #[serde(default = "default_turn_started")]
+    pub turn_started_at: u64,
+}
+
+fn default_turn_started() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }
 
 impl GameRoom {
-    pub fn new(code: String, host_id: String, host_name: String, color: Option<String>, avatar: Option<String>, two_dice: bool) -> Self {
+    pub fn new(
+        code: String,
+        host_id: String,
+        host_name: String,
+        color: Option<String>,
+        avatar: Option<String>,
+        two_dice: bool,
+    ) -> Self {
         let chosen_color = color.unwrap_or_else(|| DEFAULT_COLORS[0].to_string());
         let chosen_avatar = avatar.unwrap_or_else(|| DEFAULT_AVATARS[0].to_string());
 
-        let host = Player::new(host_id.clone(), host_name, chosen_color, chosen_avatar, false);
+        let host = Player::new(
+            host_id.clone(),
+            host_name,
+            chosen_color,
+            chosen_avatar,
+            false,
+        );
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
 
-        let mut settings = RoomSettings::default();
-        settings.two_dice = two_dice;
+        let settings = RoomSettings {
+            two_dice,
+            ..Default::default()
+        };
 
         Self {
             code,
@@ -156,10 +187,18 @@ impl GameRoom {
             settings,
             created_at: now,
             last_activity: now,
+            turn_started_at: now,
         }
     }
 
-    pub fn add_player(&mut self, id: String, name: String, color: Option<String>, avatar: Option<String>, is_bot: bool) -> Result<(), &'static str> {
+    pub fn add_player(
+        &mut self,
+        id: String,
+        name: String,
+        color: Option<String>,
+        avatar: Option<String>,
+        is_bot: bool,
+    ) -> Result<(), &'static str> {
         if self.players.len() >= 8 {
             return Err("La sala está llena (máximo 8 jugadores)");
         }
@@ -168,12 +207,42 @@ impl GameRoom {
         }
 
         let idx = self.players.len();
-        let chosen_color = color.unwrap_or_else(|| DEFAULT_COLORS[idx % DEFAULT_COLORS.len()].to_string());
-        let chosen_avatar = avatar.unwrap_or_else(|| DEFAULT_AVATARS[idx % DEFAULT_AVATARS.len()].to_string());
+        let chosen_color =
+            color.unwrap_or_else(|| DEFAULT_COLORS[idx % DEFAULT_COLORS.len()].to_string());
+        let chosen_avatar =
+            avatar.unwrap_or_else(|| DEFAULT_AVATARS[idx % DEFAULT_AVATARS.len()].to_string());
 
-        self.players.push(Player::new(id, name, chosen_color, chosen_avatar, is_bot));
+        self.players
+            .push(Player::new(id, name, chosen_color, chosen_avatar, is_bot));
         self.touch();
         Ok(())
+    }
+
+    pub fn reconnect_player(
+        &mut self,
+        id: &str,
+        name: Option<String>,
+        color: Option<String>,
+        avatar: Option<String>,
+    ) -> Result<(), &'static str> {
+        if let Some(p) = self.players.iter_mut().find(|p| p.id == id) {
+            p.is_connected = true;
+            if let Some(n) = name {
+                if !n.trim().is_empty() {
+                    p.name = n;
+                }
+            }
+            if let Some(c) = color {
+                p.color = c;
+            }
+            if let Some(a) = avatar {
+                p.avatar = a;
+            }
+            self.touch();
+            Ok(())
+        } else {
+            Err("Jugador no encontrado en la sala")
+        }
     }
 
     pub fn add_bot(&mut self) -> Result<String, &'static str> {
@@ -198,7 +267,11 @@ impl GameRoom {
             }
             if self.host_id == player_id {
                 // Promote first human or first player to host
-                let new_host = self.players.iter().find(|p| !p.is_bot).unwrap_or(&self.players[0]);
+                let new_host = self
+                    .players
+                    .iter()
+                    .find(|p| !p.is_bot)
+                    .unwrap_or(&self.players[0]);
                 self.host_id = new_host.id.clone();
             }
             if self.current_turn >= self.players.len() {
@@ -227,6 +300,10 @@ impl GameRoom {
             p.in_well = false;
             p.rolls_count = 0;
         }
+        self.turn_started_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
         self.touch();
         Ok(())
     }
@@ -276,17 +353,29 @@ impl GameRoom {
             let reason = if p_mut.in_well {
                 if turns_left == 0 {
                     p_mut.in_well = false;
-                    format!("{} cumple su castigo en el Pozo y queda libre para el próximo turno.", p_name)
+                    format!(
+                        "{} cumple su castigo en el Pozo y queda libre para el próximo turno.",
+                        p_name
+                    )
                 } else {
-                    format!("{} sigue atrapado en el Pozo. Le quedan {} turno(s).", p_name, turns_left)
+                    format!(
+                        "{} sigue atrapado en el Pozo. Le quedan {} turno(s).",
+                        p_name, turns_left
+                    )
                 }
             } else if pos == 19 {
-                format!("{} descansó en la Posada. ¡Listo para el próximo turno!", p_name)
+                format!(
+                    "{} descansó en la Posada. ¡Listo para el próximo turno!",
+                    p_name
+                )
             } else if pos == 52 {
                 if turns_left == 0 {
                     format!("{} cumplió su condena en la Cárcel y queda libre.", p_name)
                 } else {
-                    format!("{} sigue preso en la Cárcel. Le quedan {} turno(s).", p_name, turns_left)
+                    format!(
+                        "{} sigue preso en la Cárcel. Le quedan {} turno(s).",
+                        p_name, turns_left
+                    )
                 }
             } else {
                 format!("{} pierde este turno.", p_name)
@@ -347,7 +436,9 @@ impl GameRoom {
                 final_pos = 53;
                 special_type = TileType::Dados;
                 extra_turn = true;
-                rhyme = Some("¡Tiro inicial de 5+4! ¡Directo a los Dados (53) y repite turno!".to_string());
+                rhyme = Some(
+                    "¡Tiro inicial de 5+4! ¡Directo a los Dados (53) y repite turno!".to_string(),
+                );
                 message = format!("¡Tirada inicial de 9 (5 y 4)! {} vuela directo a la casilla 53 y vuelve a tirar.", p_name);
                 path.push(0);
                 path.push(53);
@@ -357,7 +448,9 @@ impl GameRoom {
                 final_pos = 26;
                 special_type = TileType::Dados;
                 extra_turn = true;
-                rhyme = Some("¡Tiro inicial de 6+3! ¡Directo a los Dados (26) y repite turno!".to_string());
+                rhyme = Some(
+                    "¡Tiro inicial de 6+3! ¡Directo a los Dados (26) y repite turno!".to_string(),
+                );
                 message = format!("¡Tirada inicial de 9 (6 y 3)! {} vuela directo a la casilla 26 y vuelve a tirar.", p_name);
                 path.push(0);
                 path.push(26);
@@ -399,13 +492,19 @@ impl GameRoom {
                 for step in (start_pos + 1)..=TOTAL_TILES {
                     path.push(step);
                 }
-                message = format!("🎉 ¡{} ha llegado a la Gran Oca con la tirada exacta y GANA LA PARTIDA! 🎉", p_name);
+                message = format!(
+                    "🎉 ¡{} ha llegado a la Gran Oca con la tirada exacta y GANA LA PARTIDA! 🎉",
+                    p_name
+                );
             } else {
                 intermediate_pos = raw_target;
                 for step in (start_pos + 1)..=raw_target {
                     path.push(step);
                 }
-                message = format!("{} avanza {} casillas hasta la {}.", p_name, total, intermediate_pos);
+                message = format!(
+                    "{} avanza {} casillas hasta la {}.",
+                    p_name, total, intermediate_pos
+                );
             }
 
             final_pos = intermediate_pos;
@@ -413,7 +512,8 @@ impl GameRoom {
 
         // If not already won, evaluate special tile rules at intermediate position
         if !is_win {
-            let (t_type, _, t_rhyme, target_tile, _t_extra, skip_turns) = BoardDefinition::tile_rule(intermediate_pos);
+            let (t_type, _, t_rhyme, target_tile, _t_extra, skip_turns) =
+                BoardDefinition::tile_rule(intermediate_pos);
             special_type = t_type;
 
             match t_type {
@@ -450,7 +550,10 @@ impl GameRoom {
                     let p = self.players.get_mut(curr_idx).unwrap();
                     p.turns_to_wait = skip_turns;
                     rhyme = t_rhyme;
-                    message = format!("🏨 ¡{} llega a la Posada a descansar y pierde 1 turno!", p_name);
+                    message = format!(
+                        "🏨 ¡{} llega a la Posada a descansar y pierde 1 turno!",
+                        p_name
+                    );
                 }
                 TileType::Pozo => {
                     // Check if another player was already trapped in the well (31)
@@ -471,7 +574,10 @@ impl GameRoom {
                     rhyme = t_rhyme;
 
                     if let Some(ref rescued) = rescued_player {
-                        message = format!("🕳️ ¡{} cae al Pozo y rescata a {}! Ahora {} queda atrapado.", p_name, rescued, p_name);
+                        message = format!(
+                            "🕳️ ¡{} cae al Pozo y rescata a {}! Ahora {} queda atrapado.",
+                            p_name, rescued, p_name
+                        );
                     } else {
                         message = format!("🕳️ ¡{} cae al Pozo! Queda atrapado hasta ser rescatado o por 3 turnos.", p_name);
                     }
@@ -481,23 +587,35 @@ impl GameRoom {
                     final_pos = dest;
                     rhyme = t_rhyme;
                     path.push(dest);
-                    message = format!("🌀 ¡Del laberinto al 30! {} se desorienta y retrocede a la casilla 30.", p_name);
+                    message = format!(
+                        "🌀 ¡Del laberinto al 30! {} se desorienta y retrocede a la casilla 30.",
+                        p_name
+                    );
                 }
                 TileType::Carcel => {
                     let p = self.players.get_mut(curr_idx).unwrap();
                     p.turns_to_wait = skip_turns;
                     rhyme = t_rhyme;
-                    message = format!("⛓️ ¡A la Cárcel! {} queda detenido y pierde 2 turnos.", p_name);
+                    message = format!(
+                        "⛓️ ¡A la Cárcel! {} queda detenido y pierde 2 turnos.",
+                        p_name
+                    );
                 }
                 TileType::Muerte => {
                     final_pos = 1;
                     rhyme = t_rhyme;
                     path.push(1);
-                    message = format!("💀 ¡LA MUERTE! {} debe volver al inicio: casilla 1.", p_name);
+                    message = format!(
+                        "💀 ¡LA MUERTE! {} debe volver al inicio: casilla 1.",
+                        p_name
+                    );
                 }
                 TileType::Meta => {
                     is_win = true;
-                    message = format!("🏆 ¡{} alcanza el Gran Jardín de la Oca y se corona CAMPEÓN!", p_name);
+                    message = format!(
+                        "🏆 ¡{} alcanza el Gran Jardín de la Oca y se corona CAMPEÓN!",
+                        p_name
+                    );
                 }
                 TileType::Normal => {}
             }
@@ -516,6 +634,11 @@ impl GameRoom {
             self.winner_name = Some(p_name.clone());
         } else if !extra_turn {
             self.advance_turn();
+        } else {
+            self.turn_started_at = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
         }
 
         let event = TurnEvent {
@@ -547,10 +670,56 @@ impl GameRoom {
             return;
         }
         self.current_turn = (self.current_turn + 1) % self.players.len();
+        self.turn_started_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+    }
+
+    pub fn check_turn_timeout(&mut self) -> Option<TurnEvent> {
+        if self.status != GameStatus::Playing || self.settings.turn_timer_seconds == 0 {
+            return None;
+        }
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        // 1-second grace period past configured timer
+        if now > self.turn_started_at + self.settings.turn_timer_seconds {
+            if let Some(curr) = self.players.get(self.current_turn) {
+                let pid = curr.id.clone();
+                return self.roll_dice(&pid).ok();
+            }
+        }
+        None
+    }
+
+    pub fn toggle_turn_timer(&mut self, seconds: Option<u64>) -> u64 {
+        let new_val = match seconds {
+            Some(s) => s,
+            None => match self.settings.turn_timer_seconds {
+                0 => 15,
+                15 => 20,
+                20 => 30,
+                _ => 0,
+            },
+        };
+        self.settings.turn_timer_seconds = new_val;
+        self.turn_started_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        self.touch();
+        new_val
     }
 
     pub fn add_chat(&mut self, sender_id: String, text: String) -> Option<ChatMessage> {
-        let name = self.players.iter().find(|p| p.id == sender_id).map(|p| p.name.clone())?;
+        let name = self
+            .players
+            .iter()
+            .find(|p| p.id == sender_id)
+            .map(|p| p.name.clone())?;
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -578,8 +747,16 @@ mod tests {
 
     #[test]
     fn test_initial_start_rules_9() {
-        let mut room = GameRoom::new("TEST".to_string(), "p1".to_string(), "Host".to_string(), None, None, true);
-        room.add_player("p2".to_string(), "Guest".to_string(), None, None, false).unwrap();
+        let mut room = GameRoom::new(
+            "TEST".to_string(),
+            "p1".to_string(),
+            "Host".to_string(),
+            None,
+            None,
+            true,
+        );
+        room.add_player("p2".to_string(), "Guest".to_string(), None, None, false)
+            .unwrap();
         room.start_game("p1").unwrap();
 
         assert_eq!(room.status, GameStatus::Playing);
@@ -603,5 +780,72 @@ mod tests {
         let (t_death, _, _, target_death, _, _) = BoardDefinition::tile_rule(58);
         assert_eq!(t_death, TileType::Muerte);
         assert_eq!(target_death, Some(1));
+    }
+
+    #[test]
+    fn test_player_reconnection() {
+        let mut room = GameRoom::new(
+            "RECO".to_string(),
+            "p1".to_string(),
+            "Host".to_string(),
+            None,
+            None,
+            true,
+        );
+        room.add_player("p2".to_string(), "Guest".to_string(), None, None, false)
+            .unwrap();
+        room.start_game("p1").unwrap();
+
+        // Simulate p2 disconnecting
+        room.players[1].is_connected = false;
+
+        // Reconnect p2 with updated name
+        let res = room.reconnect_player("p2", Some("GuestReconnected".to_string()), None, None);
+        assert!(res.is_ok());
+        assert!(room.players[1].is_connected);
+        assert_eq!(room.players[1].name, "GuestReconnected");
+
+        // Non-existent player fails
+        assert!(room.reconnect_player("unknown", None, None, None).is_err());
+    }
+
+    #[test]
+    fn test_turn_timeout_and_timer_toggle() {
+        let mut room = GameRoom::new(
+            "TIME".to_string(),
+            "p1".to_string(),
+            "Host".to_string(),
+            None,
+            None,
+            true,
+        );
+        room.add_player("p2".to_string(), "Guest".to_string(), None, None, false)
+            .unwrap();
+        room.start_game("p1").unwrap();
+
+        assert_eq!(room.settings.turn_timer_seconds, 20);
+
+        // Not expired yet
+        assert!(room.check_turn_timeout().is_none());
+
+        // Simulate turn_started_at in the past
+        room.turn_started_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs()
+            .saturating_sub(25);
+
+        // Now timeout triggers auto-roll
+        let event = room.check_turn_timeout();
+        assert!(event.is_some());
+        let ev = event.unwrap();
+        assert_eq!(ev.player_id, "p1");
+
+        // Test toggle
+        let next_timer = room.toggle_turn_timer(None);
+        assert_eq!(next_timer, 30);
+        let next_timer_2 = room.toggle_turn_timer(None);
+        assert_eq!(next_timer_2, 0); // infinite
+        assert!(room.check_turn_timeout().is_none());
     }
 }

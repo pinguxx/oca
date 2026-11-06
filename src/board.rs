@@ -139,7 +139,6 @@ impl BoardDefinition {
             (0, 5, 6.5, 64.3, 0.0),  // 33
             (0, 6, 6.5, 73.8, 0.0),  // 34
             (0, 7, 6.5, 83.3, 0.0),  // 35
-
             // Ring 2 (Middle loop, bottom -> right -> top -> left)
             (1, 7, 19.5, 79.4, 0.0), // 36 (Oca)
             (2, 7, 29.5, 79.4, 0.0), // 37
@@ -164,13 +163,11 @@ impl BoardDefinition {
             (1, 3, 19.5, 35.3, 0.0), // 56
             (1, 4, 19.5, 50.0, 0.0), // 57
             (1, 5, 19.5, 64.7, 0.0), // 58 (Muerte)
-
             // Ring 3 (Inner approach to center court)
             (3, 5, 32.5, 66.1, 0.0), // 59 (Oca)
             (4, 5, 44.0, 66.1, 0.0), // 60
             (5, 5, 55.5, 66.1, 0.0), // 61
             (6, 5, 67.0, 66.1, 0.0), // 62
-
             // Casilla 63: Gran Jardín de la Oca (Meta)
             (6, 3, 61.0, 43.3, 0.0), // 63
         ]
@@ -335,7 +332,9 @@ impl BoardDefinition {
             31 => (
                 TileType::Pozo,
                 "El Pozo".to_string(),
-                Some("¡Caíste en el Pozo! Atrapado hasta ser rescatado o por 3 turnos.".to_string()),
+                Some(
+                    "¡Caíste en el Pozo! Atrapado hasta ser rescatado o por 3 turnos.".to_string(),
+                ),
                 None,
                 false,
                 3,
@@ -345,7 +344,10 @@ impl BoardDefinition {
             42 => (
                 TileType::Laberinto,
                 "El Laberinto".to_string(),
-                Some("¡Del laberinto al 30! Te desorientas y retrocedes a la casilla 30.".to_string()),
+                Some(
+                    "¡Del laberinto al 30! Te desorientas y retrocedes a la casilla 30."
+                        .to_string(),
+                ),
                 Some(30),
                 false,
                 0,
@@ -382,7 +384,14 @@ impl BoardDefinition {
             ),
 
             // Casillas normales ilustradas
-            _ => (TileType::Normal, format!("Casilla {}", num), None, None, false, 0),
+            _ => (
+                TileType::Normal,
+                format!("Casilla {}", num),
+                None,
+                None,
+                false,
+                0,
+            ),
         }
     }
 

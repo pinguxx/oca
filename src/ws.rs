@@ -36,7 +36,8 @@ impl AppState {
 
 pub fn generate_room_code() -> String {
     const WORDS: [&str; 12] = [
-        "OCAS", "GANS", "PATO", "LAGO", "PLUM", "VOLA", "PICO", "NIDO", "MAIZ", "AGUA", "RIOS", "ALAS"
+        "OCAS", "GANS", "PATO", "LAGO", "PLUM", "VOLA", "PICO", "NIDO", "MAIZ", "AGUA", "RIOS",
+        "ALAS",
     ];
     let mut rng = rand::rng();
     let word = WORDS[rng.random_range(0..WORDS.len())];
@@ -127,27 +128,24 @@ pub fn maybe_schedule_bot_turn(state: AppState, room_code: String, delay_ms: u64
             }
 
             let bot_id = curr.id.clone();
-            match room.roll_dice(&bot_id) {
-                Ok(event) => {
-                    let wait_ms = (event.path.len() as u64 * 250) + 2600;
-                    turn_event_payload = Some(json!({
-                        "type": "turn_event",
-                        "event": event
-                    }));
-                    room_state_payload = Some(json!({
-                        "type": "room_state",
-                        "room": room
-                    }));
+            if let Ok(event) = room.roll_dice(&bot_id) {
+                let wait_ms = (event.path.len() as u64 * 250) + 2600;
+                turn_event_payload = Some(json!({
+                    "type": "turn_event",
+                    "event": event
+                }));
+                room_state_payload = Some(json!({
+                    "type": "room_state",
+                    "room": room
+                }));
 
-                    if room.status == GameStatus::Playing {
-                        if let Some(next) = room.current_player() {
-                            if next.is_bot {
-                                next_bot_delay = Some(wait_ms);
-                            }
+                if room.status == GameStatus::Playing {
+                    if let Some(next) = room.current_player() {
+                        if next.is_bot {
+                            next_bot_delay = Some(wait_ms);
                         }
                     }
                 }
-                Err(_) => {}
             }
         }
 
@@ -171,12 +169,14 @@ enum ClientMessage {
         color: Option<String>,
         avatar: Option<String>,
         two_dice: Option<bool>,
+        turn_timer_seconds: Option<u64>,
     },
     JoinRoom {
         room_code: String,
         player_name: Option<String>,
         color: Option<String>,
         avatar: Option<String>,
+        player_id: Option<String>,
     },
     StartGame,
     RestartGame,
@@ -185,6 +185,9 @@ enum ClientMessage {
         player_id: String,
     },
     RollDice,
+    ToggleTimer {
+        seconds: Option<u64>,
+    },
     SendChat {
         text: String,
     },
@@ -213,16 +216,28 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
         };
 
         let Ok(parsed) = serde_json::from_str::<ClientMessage>(&text_bytes) else {
-            send_direct(&tx, &json!({ "type": "error", "message": "Mensaje inválido" }));
+            send_direct(
+                &tx,
+                &json!({ "type": "error", "message": "Mensaje inválido" }),
+            );
             continue;
         };
 
         match parsed {
-            ClientMessage::CreateRoom { player_name, color, avatar, two_dice } => {
+            ClientMessage::CreateRoom {
+                player_name,
+                color,
+                avatar,
+                two_dice,
+                turn_timer_seconds,
+            } => {
                 let code = {
                     let mut rooms_guard = state.rooms.write().await;
                     if rooms_guard.len() >= MAX_ACTIVE_ROOMS {
-                        send_direct(&tx, &json!({ "type": "error", "message": "Límite de salas activas alcanzado." }));
+                        send_direct(
+                            &tx,
+                            &json!({ "type": "error", "message": "Límite de salas activas alcanzado." }),
+                        );
                         continue;
                     }
                     let mut candidate = generate_room_code();
@@ -235,7 +250,7 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                     let p_color = sanitize_color(color, "#e63946");
                     let p_avatar = sanitize_avatar(avatar, "🪿");
 
-                    let room = GameRoom::new(
+                    let mut room = GameRoom::new(
                         candidate.clone(),
                         p_id.clone(),
                         p_name,
@@ -243,6 +258,9 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                         Some(p_avatar),
                         two_dice.unwrap_or(true),
                     );
+                    if let Some(timer) = turn_timer_seconds {
+                        room.settings.turn_timer_seconds = timer;
+                    }
 
                     rooms_guard.insert(candidate.clone(), room);
                     current_room_code = Some(candidate.clone());
@@ -260,40 +278,93 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                 // Send back state
                 let rooms_guard = state.rooms.read().await;
                 if let Some(r) = rooms_guard.get(&code) {
-                    send_direct(&tx, &json!({
-                        "type": "room_created",
-                        "room": r,
-                        "my_id": current_player_id
-                    }));
+                    send_direct(
+                        &tx,
+                        &json!({
+                            "type": "room_created",
+                            "room": r,
+                            "my_id": current_player_id
+                        }),
+                    );
                 }
             }
 
-            ClientMessage::JoinRoom { room_code, player_name, color, avatar } => {
+            ClientMessage::JoinRoom {
+                room_code,
+                player_name,
+                color,
+                avatar,
+                player_id,
+            } => {
                 let code = room_code.trim().to_uppercase();
-                let player_id = current_player_id.clone().unwrap_or_else(|| {
-                    format!("user_{:08x}", rand::rng().random_range(0..u32::MAX))
-                });
+                let mut is_reconnect = false;
+                let actual_pid;
 
                 {
                     let mut rooms_guard = state.rooms.write().await;
                     if let Some(room) = rooms_guard.get_mut(&code) {
-                        let count = room.players.len() + 1;
-                        let p_name = sanitize_name(&player_name.unwrap_or_default(), &format!("Jugador {}", count));
-                        let p_color = sanitize_color(color, &crate::game::DEFAULT_COLORS[count % 6]);
-                        let p_avatar = sanitize_avatar(avatar, &crate::game::DEFAULT_AVATARS[count % 6]);
+                        if let Some(ref req_id) = player_id {
+                            if room.players.iter().any(|p| p.id == *req_id) {
+                                let clean_name =
+                                    player_name.as_ref().map(|n| sanitize_name(n, "Jugador"));
+                                let clean_color = color
+                                    .as_ref()
+                                    .map(|c| sanitize_color(Some(c.clone()), "#e63946"));
+                                let clean_avatar = avatar
+                                    .as_ref()
+                                    .map(|a| sanitize_avatar(Some(a.clone()), "🪿"));
 
-                        match room.add_player(player_id.clone(), p_name, Some(p_color), Some(p_avatar), false) {
-                            Ok(_) => {
+                                let _ = room.reconnect_player(
+                                    req_id,
+                                    clean_name,
+                                    clean_color,
+                                    clean_avatar,
+                                );
+                                actual_pid = req_id.clone();
+                                is_reconnect = true;
                                 current_room_code = Some(code.clone());
-                                current_player_id = Some(player_id.clone());
+                                current_player_id = Some(actual_pid.clone());
+                            } else {
+                                actual_pid = req_id.clone();
                             }
-                            Err(e) => {
-                                send_direct(&tx, &json!({ "type": "error", "message": e }));
-                                continue;
+                        } else {
+                            actual_pid =
+                                format!("user_{:08x}", rand::rng().random_range(0..u32::MAX));
+                        }
+
+                        if !is_reconnect {
+                            let count = room.players.len() + 1;
+                            let p_name = sanitize_name(
+                                &player_name.unwrap_or_default(),
+                                &format!("Jugador {}", count),
+                            );
+                            let p_color =
+                                sanitize_color(color, crate::game::DEFAULT_COLORS[count % 6]);
+                            let p_avatar =
+                                sanitize_avatar(avatar, crate::game::DEFAULT_AVATARS[count % 6]);
+
+                            match room.add_player(
+                                actual_pid.clone(),
+                                p_name,
+                                Some(p_color),
+                                Some(p_avatar),
+                                false,
+                            ) {
+                                Ok(_) => {
+                                    current_room_code = Some(code.clone());
+                                    current_player_id = Some(actual_pid.clone());
+                                }
+                                Err(e) => {
+                                    send_direct(&tx, &json!({ "type": "error", "message": e }));
+                                    continue;
+                                }
                             }
                         }
                     } else {
-                        send_direct(&tx, &json!({ "type": "error", "message": "Sala no encontrada" }));
+                        send_direct(
+                            &tx,
+                            &json!({ "type": "error", "message": "Sala no encontrada" }),
+                        );
                         continue;
                     }
                 }
@@ -306,21 +377,34 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
 
                 let rooms_guard = state.rooms.read().await;
                 if let Some(r) = rooms_guard.get(&code) {
-                    send_direct(&tx, &json!({
-                        "type": "room_joined",
-                        "room": r,
-                        "my_id": player_id
-                    }));
-                    broadcast_to_room(&state, &code, &json!({
-                        "type": "room_state",
-                        "room": r
-                    })).await;
+                    send_direct(
+                        &tx,
+                        &json!({
+                            "type": "room_joined",
+                            "room": r,
+                            "my_id": actual_pid,
+                            "is_reconnect": is_reconnect
+                        }),
+                    );
+                    broadcast_to_room(
+                        &state,
+                        &code,
+                        &json!({
+                            "type": "room_state",
+                            "room": r
+                        }),
+                    )
+                    .await;
                 }
             }
 
             ClientMessage::StartGame => {
-                let Some(ref code) = current_room_code else { continue; };
-                let Some(ref p_id) = current_player_id else { continue; };
+                let Some(ref code) = current_room_code else {
+                    continue;
+                };
+                let Some(ref p_id) = current_player_id else {
+                    continue;
+                };
 
                 let mut started = false;
                 {
@@ -338,10 +422,15 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                 if started {
                     let rooms_guard = state.rooms.read().await;
                     if let Some(r) = rooms_guard.get(code) {
-                        broadcast_to_room(&state, code, &json!({
-                            "type": "game_started",
-                            "room": r
-                        })).await;
+                        broadcast_to_room(
+                            &state,
+                            code,
+                            &json!({
+                                "type": "game_started",
+                                "room": r
+                            }),
+                        )
+                        .await;
 
                         if let Some(curr) = r.current_player() {
                             if curr.is_bot {
@@ -353,8 +442,12 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
             }
 
             ClientMessage::RestartGame => {
-                let Some(ref code) = current_room_code else { continue; };
-                let Some(ref p_id) = current_player_id else { continue; };
+                let Some(ref code) = current_room_code else {
+                    continue;
+                };
+                let Some(ref p_id) = current_player_id else {
+                    continue;
+                };
 
                 let mut restarted = false;
                 {
@@ -372,10 +465,15 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                 if restarted {
                     let rooms_guard = state.rooms.read().await;
                     if let Some(r) = rooms_guard.get(code) {
-                        broadcast_to_room(&state, code, &json!({
-                            "type": "game_started",
-                            "room": r
-                        })).await;
+                        broadcast_to_room(
+                            &state,
+                            code,
+                            &json!({
+                                "type": "game_started",
+                                "room": r
+                            }),
+                        )
+                        .await;
 
                         if let Some(curr) = r.current_player() {
                             if curr.is_bot {
@@ -387,7 +485,9 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
             }
 
             ClientMessage::AddBot => {
-                let Some(ref code) = current_room_code else { continue; };
+                let Some(ref code) = current_room_code else {
+                    continue;
+                };
                 let mut added = false;
                 {
                     let mut rooms_guard = state.rooms.write().await;
@@ -404,16 +504,23 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                 if added {
                     let rooms_guard = state.rooms.read().await;
                     if let Some(r) = rooms_guard.get(code) {
-                        broadcast_to_room(&state, code, &json!({
-                            "type": "room_state",
-                            "room": r
-                        })).await;
+                        broadcast_to_room(
+                            &state,
+                            code,
+                            &json!({
+                                "type": "room_state",
+                                "room": r
+                            }),
+                        )
+                        .await;
                     }
                 }
             }
 
             ClientMessage::RemovePlayer { player_id } => {
-                let Some(ref code) = current_room_code else { continue; };
+                let Some(ref code) = current_room_code else {
+                    continue;
+                };
                 let mut should_delete = false;
                 {
                     let mut rooms_guard = state.rooms.write().await;
@@ -428,17 +535,26 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                 if !should_delete {
                     let rooms_guard = state.rooms.read().await;
                     if let Some(r) = rooms_guard.get(code) {
-                        broadcast_to_room(&state, code, &json!({
-                            "type": "room_state",
-                            "room": r
-                        })).await;
+                        broadcast_to_room(
+                            &state,
+                            code,
+                            &json!({
+                                "type": "room_state",
+                                "room": r
+                            }),
+                        )
+                        .await;
                     }
                 }
             }
 
             ClientMessage::RollDice => {
-                let Some(ref code) = current_room_code else { continue; };
-                let Some(ref p_id) = current_player_id else { continue; };
+                let Some(ref code) = current_room_code else {
+                    continue;
+                };
+                let Some(ref p_id) = current_player_id else {
+                    continue;
+                };
 
                 let mut turn_event_payload: Option<Value> = None;
                 let mut room_state_payload: Option<Value> = None;
@@ -486,8 +602,12 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
             }
 
             ClientMessage::SendChat { text } => {
-                let Some(ref code) = current_room_code else { continue; };
-                let Some(ref p_id) = current_player_id else { continue; };
+                let Some(ref code) = current_room_code else {
+                    continue;
+                };
+                let Some(ref p_id) = current_player_id else {
+                    continue;
+                };
 
                 let clean_text = text.trim();
                 if clean_text.is_empty() || clean_text.len() > 160 {
@@ -503,10 +623,47 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                 }
 
                 if let Some(msg) = chat_msg {
-                    broadcast_to_room(&state, code, &json!({
-                        "type": "chat_message",
-                        "chat": msg
-                    })).await;
+                    broadcast_to_room(
+                        &state,
+                        code,
+                        &json!({
+                            "type": "chat_message",
+                            "chat": msg
+                        }),
+                    )
+                    .await;
+                }
+            }
+
+            ClientMessage::ToggleTimer { seconds } => {
+                let Some(ref code) = current_room_code else {
+                    continue;
+                };
+                let Some(ref p_id) = current_player_id else {
+                    continue;
+                };
+
+                let mut updated_state = None;
+                {
+                    let mut rooms_guard = state.rooms.write().await;
+                    if let Some(room) = rooms_guard.get_mut(code) {
+                        if room.host_id == *p_id {
+                            room.toggle_turn_timer(seconds);
+                            updated_state = Some(json!({
+                                "type": "room_state",
+                                "room": room
+                            }));
+                        } else {
+                            send_direct(
+                                &tx,
+                                &json!({ "type": "error", "message": "Solo el anfitrión puede cambiar el temporizador" }),
+                            );
+                        }
+                    }
+                }
+
+                if let Some(s) = updated_state {
+                    broadcast_to_room(&state, code, &s).await;
                 }
             }
 
@@ -525,6 +682,14 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                 sockets_guard.remove(code);
             }
         }
+        if let Some(ref pid) = current_player_id {
+            let mut rooms_guard = state.rooms.write().await;
+            if let Some(room) = rooms_guard.get_mut(code) {
+                if let Some(p) = room.players.iter_mut().find(|p| p.id == *pid) {
+                    p.is_connected = false;
+                }
+            }
+        }
     }
 
     writer_task.abort();
@@ -532,27 +697,62 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
 
 pub fn start_background_maintenance(state: AppState) {
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(600)); // Every 10 mins
+        let mut interval = tokio::time::interval(Duration::from_millis(1000));
+        let mut ticks: u64 = 0;
         loop {
             interval.tick().await;
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs();
+            ticks = ticks.wrapping_add(1);
 
-            let mut rooms_guard = state.rooms.write().await;
-            let mut sockets_guard = state.sockets.write().await;
+            let mut timeout_events = Vec::new();
+            {
+                let mut rooms_guard = state.rooms.write().await;
+                for (code, room) in rooms_guard.iter_mut() {
+                    if let Some(event) = room.check_turn_timeout() {
+                        let next_bot = room.current_player().map(|p| p.is_bot).unwrap_or(false);
+                        timeout_events.push((code.clone(), event, json!(room), next_bot));
+                    }
+                }
+            }
 
-            // Remove rooms inactive for > 2 hours (7200 seconds)
-            let stale_codes: Vec<String> = rooms_guard
-                .iter()
-                .filter(|(_, room)| now.saturating_sub(room.last_activity) > 7200)
-                .map(|(code, _)| code.clone())
-                .collect();
+            for (code, event, room_json, next_bot) in timeout_events {
+                broadcast_to_room(
+                    &state,
+                    &code,
+                    &json!({
+                        "type": "turn_played",
+                        "event": event,
+                        "room": room_json,
+                        "was_timeout": true
+                    }),
+                )
+                .await;
 
-            for code in stale_codes {
-                rooms_guard.remove(&code);
-                sockets_guard.remove(&code);
+                if next_bot {
+                    maybe_schedule_bot_turn(state.clone(), code, 1200);
+                }
+            }
+
+            // Stale cleanup every 60 seconds
+            if ticks.is_multiple_of(60) {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+
+                let mut rooms_guard = state.rooms.write().await;
+                let mut sockets_guard = state.sockets.write().await;
+
+                // Remove rooms inactive for > 2 hours (7200 seconds)
+                let stale_codes: Vec<String> = rooms_guard
+                    .iter()
+                    .filter(|(_, room)| now.saturating_sub(room.last_activity) > 7200)
+                    .map(|(code, _)| code.clone())
+                    .collect();
+
+                for code in stale_codes {
+                    rooms_guard.remove(&code);
+                    sockets_guard.remove(&code);
+                }
             }
         }
     });

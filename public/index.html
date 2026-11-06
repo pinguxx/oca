@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2.3">
+  <link rel="stylesheet" href="style.css?v=2.4">
 </head>
 <body>
 
@@ -62,7 +62,7 @@
         <!-- Player Customization -->
         <div class="form-section">
           <label class="form-label" for="player-name-input">Tu Nombre o Apodo:</label>
-          <input type="text" id="player-name-input" class="text-input" placeholder="Ej. El Ganso Dorado" maxlength="18" value="Jugador 1">
+          <input type="text" id="player-name-input" class="text-input" placeholder="Escribe tu nombre o apodo..." maxlength="18" autocomplete="off" required>
 
           <label class="form-label">Elige tu Ficha y Mascota:</label>
           <div class="avatar-selector" id="avatar-selector">
@@ -98,6 +98,15 @@
 
         <!-- Tab Panel: Crear Sala -->
         <div class="tab-content active" id="panel-create">
+          <div class="rules-toggle-row">
+            <label class="form-label" for="sel-turn-timer" style="margin-bottom: 4px; font-weight: 700;">⏱️ Tiempo por Turno (AFK):</label>
+            <select id="sel-turn-timer" class="text-input" style="padding: 9px 12px; margin-bottom: 12px; font-weight: 600;">
+              <option value="20" selected>⏱️ 20 segundos (Recomendado)</option>
+              <option value="15">⏱️ 15 segundos (Rápido)</option>
+              <option value="30">⏱️ 30 segundos (Tranquilo)</option>
+              <option value="0">♾️ Sin límite (Manual)</option>
+            </select>
+          </div>
           <div class="rules-toggle-row">
             <label class="checkbox-label">
               <input type="checkbox" id="chk-two-dice" checked>
@@ -184,6 +193,7 @@
               <span class="turn-label">TURNO ACTUAL</span>
               <span class="turn-name" id="turn-name">Don Ganso</span>
             </div>
+            <button id="btn-turn-timer" class="turn-timer-pill" title="Temporizador de turno (clic anfitrión para alternar)">⏱️ 20s</button>
             <div class="turn-status-badge" id="turn-status-badge">Esperando tiro...</div>
           </div>
 
@@ -267,7 +277,7 @@
             <div class="dice-arena">
               <div class="dice-stage" id="dice-container-box" title="Haz clic en los dados o botón para tirar">
                 <!-- 3D Cube Die 1 -->
-                <div id="cube-die-1" class="cube-die">
+                <div id="cube-die-1" class="cube-die" data-face="1">
                   <div class="cube-face face-1"><span class="pip pip-ace"></span></div>
                   <div class="cube-face face-2"><span class="pip"></span><span class="pip"></span></div>
                   <div class="cube-face face-3"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
@@ -277,7 +287,7 @@
                 </div>
 
                 <!-- 3D Cube Die 2 -->
-                <div id="cube-die-2" class="cube-die">
+                <div id="cube-die-2" class="cube-die" data-face="1">
                   <div class="cube-face face-1"><span class="pip pip-ace"></span></div>
                   <div class="cube-face face-2"><span class="pip"></span><span class="pip"></span></div>
                   <div class="cube-face face-3"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
@@ -466,6 +476,6 @@
   <!-- Scripts -->
   <script src="qrcode.min.js"></script>
   <script src="audio.js"></script>
-  <script src="app.js?v=2.3"></script>
+  <script src="app.js?v=2.4"></script>
 </body>
 </html>
