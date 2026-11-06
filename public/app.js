@@ -175,8 +175,8 @@ class OcaGameApp {
             <rect x="-31.5" y="-33.5" width="63" height="67" rx="5" fill="none" stroke="#d4af37" stroke-width="1.5"/>
 
             <!-- Centered Number Badge 0 -->
-            <circle cx="-22" cy="-24" r="9.5" fill="#ffffff" stroke="#851e1e" stroke-width="1.3"/>
-            <text class="svg-card-num-text" x="-22" y="-24">0</text>
+            <circle cx="-20" cy="-21" r="12" fill="#ffffff" stroke="#851e1e" stroke-width="1.8"/>
+            <text class="svg-card-num-text" x="-20" y="-21">0</text>
 
             <!-- Checkered Flag and Label -->
             <text x="0" y="5" text-anchor="middle" font-size="24">🏁</text>
@@ -330,12 +330,12 @@ class OcaGameApp {
                 <rect class="svg-card-rect" id="rect-card-${i}" x="-34" y="-36" width="68" height="72" rx="7" fill="${bgColor}" stroke="rgba(133,30,30,0.35)" stroke-width="1.2" filter="url(#cardShadow)"/>
                 <rect x="-31.5" y="-33.5" width="63" height="67" rx="5" fill="none" stroke="rgba(212,175,55,0.4)" stroke-width="0.8"/>
 
-                <!-- Vintage Number Badge (Centered perfectly) -->
-                <circle cx="-22" cy="-24" r="9.5" fill="#ffffff" stroke="#851e1e" stroke-width="1.3"/>
-                <text class="svg-card-num-text" x="-22" y="-24">${i}</text>
+                <!-- Vintage Number Badge (Prominent, High Contrast & Centered) -->
+                <circle cx="-20" cy="-21" r="12" fill="#ffffff" stroke="#851e1e" stroke-width="1.8"/>
+                <text class="svg-card-num-text" x="-20" y="-21">${i}</text>
 
                 <!-- Corner Star Accent -->
-                <text x="22" y="-22" font-size="9.5" fill="#d90429" text-anchor="middle">★</text>
+                <text x="21" y="-20" font-size="11" fill="#d90429" text-anchor="middle">★</text>
 
                 <!-- Illustrated Scene -->
                 <g>
@@ -414,58 +414,58 @@ class OcaGameApp {
         // Special Tiles
         if (type === 'oca') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="20">🦆</text>
-                <rect x="-21" y="15" width="42" height="10" rx="3" fill="#2a9d8f" stroke="#1b4332" stroke-width="0.8"/>
-                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">★ OCA ★</text>
+                <text x="0" y="8" text-anchor="middle" font-size="24">🦆</text>
+                <rect x="-25" y="16" width="50" height="13" rx="3.5" fill="#2a9d8f" stroke="#1b4332" stroke-width="1"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="8.8" fill="#ffffff" letter-spacing="0.5">★ OCA ★</text>
             `;
         }
         if (type === 'puente') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="20">🌉</text>
-                <rect x="-22" y="15" width="44" height="10" rx="3" fill="#0077b6" stroke="#03045e" stroke-width="0.8"/>
-                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">PUENTE</text>
+                <text x="0" y="8" text-anchor="middle" font-size="24">🌉</text>
+                <rect x="-25" y="16" width="50" height="13" rx="3.5" fill="#0077b6" stroke="#03045e" stroke-width="1"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="8.8" fill="#ffffff" letter-spacing="0.5">PUENTE</text>
             `;
         }
         if (type === 'dados') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="19">🎲</text>
-                <rect x="-21" y="15" width="42" height="10" rx="3" fill="#7209b7" stroke="#3a0ca3" stroke-width="0.8"/>
-                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">DADOS</text>
+                <text x="0" y="8" text-anchor="middle" font-size="23">🎲</text>
+                <rect x="-25" y="16" width="50" height="13" rx="3.5" fill="#7209b7" stroke="#3a0ca3" stroke-width="1"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="8.8" fill="#ffffff" letter-spacing="0.5">DADOS</text>
             `;
         }
         if (type === 'posada') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="19">🏨</text>
-                <rect x="-21" y="15" width="42" height="10" rx="3" fill="#e76f51" stroke="#9d0208" stroke-width="0.8"/>
-                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="6.8" fill="#ffffff">POSADA</text>
+                <text x="0" y="8" text-anchor="middle" font-size="23">🏨</text>
+                <rect x="-25" y="16" width="50" height="13" rx="3.5" fill="#e76f51" stroke="#9d0208" stroke-width="1"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="8.5" fill="#ffffff" letter-spacing="0.5">POSADA</text>
             `;
         }
         if (type === 'pozo') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="19">🕳️</text>
-                <rect x="-20" y="15" width="40" height="10" rx="3" fill="#52796f" stroke="#2f3e46" stroke-width="0.8"/>
-                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">POZO</text>
+                <text x="0" y="8" text-anchor="middle" font-size="23">🕳️</text>
+                <rect x="-25" y="16" width="50" height="13" rx="3.5" fill="#52796f" stroke="#2f3e46" stroke-width="1"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="8.8" fill="#ffffff" letter-spacing="0.5">POZO</text>
             `;
         }
         if (type === 'laberinto') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="19">🌀</text>
-                <rect x="-23" y="15" width="46" height="10" rx="3" fill="#023e8a" stroke="#03045e" stroke-width="0.8"/>
-                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="6.5" fill="#ffffff">LABERINTO</text>
+                <text x="0" y="8" text-anchor="middle" font-size="23">🌀</text>
+                <rect x="-25" y="16" width="50" height="13" rx="3.5" fill="#023e8a" stroke="#03045e" stroke-width="1"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="8.2" fill="#ffffff" letter-spacing="0.3">LABERINTO</text>
             `;
         }
         if (type === 'carcel') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="19">⛓️</text>
-                <rect x="-21" y="15" width="42" height="10" rx="3" fill="#4a4e69" stroke="#22223b" stroke-width="0.8"/>
-                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">CÁRCEL</text>
+                <text x="0" y="8" text-anchor="middle" font-size="23">⛓️</text>
+                <rect x="-25" y="16" width="50" height="13" rx="3.5" fill="#4a4e69" stroke="#22223b" stroke-width="1"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="8.8" fill="#ffffff" letter-spacing="0.5">CÁRCEL</text>
             `;
         }
         if (type === 'muerte') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="20">💀</text>
-                <rect x="-22" y="15" width="44" height="10" rx="3" fill="#c1121f" stroke="#780000" stroke-width="0.8"/>
-                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">MUERTE</text>
+                <text x="0" y="8" text-anchor="middle" font-size="24">💀</text>
+                <rect x="-25" y="16" width="50" height="13" rx="3.5" fill="#c1121f" stroke="#780000" stroke-width="1"/>
+                <text x="0" y="25.5" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="8.8" fill="#ffffff" letter-spacing="0.5">MUERTE</text>
             `;
         }
 
@@ -515,9 +515,10 @@ class OcaGameApp {
 
         const item = motifs[num] || { icon: '⭐', label: `PASO ${num}` };
         return `
-            <circle cx="0" cy="3" r="14" fill="#ffffff" stroke="#d4af37" stroke-width="1" opacity="0.95"/>
-            <text x="0" y="8" text-anchor="middle" font-size="16">${item.icon}</text>
-            <text x="0" y="22" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="800" font-size="6.8" fill="#4a3525" letter-spacing="0.3">${item.label}</text>
+            <circle cx="0" cy="2" r="16" fill="#ffffff" stroke="#d4af37" stroke-width="1.2" opacity="0.95"/>
+            <text x="0" y="8.5" text-anchor="middle" font-size="20">${item.icon}</text>
+            <rect x="-25" y="16" width="50" height="12" rx="3.5" fill="#ffffff" stroke="#d4af37" stroke-width="0.8"/>
+            <text x="0" y="25" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="8.5" fill="#3a2212" letter-spacing="0.4">${item.label}</text>
         `;
     }
 
@@ -755,10 +756,10 @@ class OcaGameApp {
         this.camera.y = clamped.y;
     }
 
-    // Smooth zoom into a specific token (2.3x on mobile so cards, icons and text are big & crystal clear)
+    // Smooth zoom into a specific token (2.85x on mobile so cards, icons and numbers are huge & crystal clear)
     zoomInToToken(tileNum, duration = 0.85) {
         const isMobile = window.innerWidth <= 768;
-        this.camera.scale = isMobile ? 2.3 : 1.75;
+        this.camera.scale = isMobile ? 2.85 : 1.85;
         this.camera.isZoomed = true;
         this.updateCameraPillText();
         this.calculateTargetCameraXY(tileNum);
@@ -1208,10 +1209,15 @@ class OcaGameApp {
 
         banner.classList.remove('hidden');
 
+        banner.onclick = () => {
+            banner.classList.add('hidden');
+            if (this.bannerTimeout) clearTimeout(this.bannerTimeout);
+        };
+
         if (this.bannerTimeout) clearTimeout(this.bannerTimeout);
         this.bannerTimeout = setTimeout(() => {
             banner.classList.add('hidden');
-        }, 4000);
+        }, 2800);
     }
 
     // ========================================================
