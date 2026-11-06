@@ -194,19 +194,12 @@
 
           <!-- The Spiral Board Viewport & Camera -->
           <div class="board-wrapper" id="board-wrapper">
-            <!-- Compact Floating Camera Controls (Positioned bottom-right so they never cover tiles) -->
+            <!-- Floating Camera Toggle (Full View vs Follow My Chip) -->
             <div class="board-camera-controls">
-              <button id="btn-camera-auto" class="btn-cam-pill active" title="Alternar Zoom Automático durante las jugadas">
-                <span class="cam-icon">🎥</span> <span id="cam-auto-text">Acción: ON</span>
+              <button id="btn-camera-toggle" class="btn-cam-pill" title="Alternar entre Vista Completa y Seguir Ficha">
+                <span class="cam-icon" id="cam-icon">🎯</span>
+                <span id="cam-mode-text">Seguir Mi Ficha</span>
               </button>
-              <button id="btn-camera-toggle" class="btn-cam-pill" title="Alternar entre Vista Zoom y Completa">
-                <span class="cam-icon">🔍</span> <span id="cam-mode-text">Zoom</span>
-              </button>
-              <button id="btn-camera-center-me" class="btn-cam-mini" title="Centrar en mi ficha">📍</button>
-              <div class="zoom-stepper">
-                <button id="btn-zoom-in" class="btn-cam-mini" title="Acercar">+</button>
-                <button id="btn-zoom-out" class="btn-cam-mini" title="Alejar">−</button>
-              </div>
             </div>
 
             <div class="board-viewport" id="board-viewport">

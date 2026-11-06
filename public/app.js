@@ -18,8 +18,9 @@ class OcaGameApp {
         this.selectedAvatar = '🪿';
         this.selectedColor = '#e63946';
 
-        // Cinematic Action Camera: Zooms into moving token, then zooms back out to full board
-        this.actionCameraEnabled = true;
+        // Cinematic Action Camera: Follows chip smoothly when it is your turn
+        this.followMyChip = true;
+        this.activeMovingPlayerId = null;
 
         this.camera = {
             x: 0,
@@ -519,24 +520,39 @@ class OcaGameApp {
     renderPlayerTokens() {
         const tokensGroup = document.getElementById('svg-tokens-group');
         if (!tokensGroup || !this.room) return;
-        tokensGroup.innerHTML = '';
 
+        const activePlayerIds = new Set(this.room.players.map(p => p.id));
+
+        // Remove tokens for players who are no longer in the room
+        Array.from(tokensGroup.children).forEach(child => {
+            const id = child.id ? child.id.replace('token-group-', '') : '';
+            if (id && !activePlayerIds.has(id)) {
+                tokensGroup.removeChild(child);
+            }
+        });
+
+        // Group players by current position to compute multi-player offsets
         const posMap = {};
         this.room.players.forEach(p => {
-            this.playerPositions[p.id] = p.position;
-            if (!posMap[p.position]) posMap[p.position] = [];
-            posMap[p.position].push(p);
+            if (this.activeMovingPlayerId !== p.id) {
+                this.playerPositions[p.id] = p.position;
+            }
+            const pos = this.playerPositions[p.id] ?? p.position ?? 0;
+            if (!posMap[pos]) posMap[pos] = [];
+            posMap[pos].push(p);
         });
 
         Object.entries(posMap).forEach(([posStr, playersOnTile]) => {
             const pos = parseInt(posStr, 10);
             const coords = this.boardCoords[pos] || this.boardCoords[0];
+            const totalOnTile = playersOnTile.length;
 
             playersOnTile.forEach((player, idx) => {
-                const totalOnTile = playersOnTile.length;
+                // If this token is currently in the middle of hopping animation, do not override its transform!
+                if (this.activeMovingPlayerId === player.id) return;
+
                 let offsetX = 0;
                 let offsetY = 0;
-
                 if (totalOnTile > 1) {
                     const angle = (idx / totalOnTile) * Math.PI * 2;
                     const radius = 18;
@@ -544,17 +560,21 @@ class OcaGameApp {
                     offsetY = Math.sin(angle) * radius;
                 }
 
-                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                g.setAttribute('id', `token-group-${player.id}`);
-                g.setAttribute('class', 'token-group');
-                g.setAttribute('transform', `translate(${coords.x + offsetX}, ${coords.y + offsetY})`);
-
-                g.innerHTML = `
-                    <circle class="token-circle" r="20" fill="${player.color}"/>
-                    <circle r="17.5" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.8"/>
-                    <text class="token-avatar" y="0">${player.avatar}</text>
-                `;
-                tokensGroup.appendChild(g);
+                let tokenEl = document.getElementById(`token-group-${player.id}`);
+                if (!tokenEl) {
+                    tokenEl = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    tokenEl.setAttribute('id', `token-group-${player.id}`);
+                    tokenEl.setAttribute('class', 'token-group');
+                    tokenEl.innerHTML = `
+                        <circle class="token-circle" r="20" fill="${player.color}"/>
+                        <circle r="17.5" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.8"/>
+                        <text class="token-avatar" y="0">${player.avatar}</text>
+                    `;
+                    tokenEl.setAttribute('transform', `translate(${coords.x + offsetX}, ${coords.y + offsetY})`);
+                    tokensGroup.appendChild(tokenEl);
+                } else {
+                    tokenEl.setAttribute('transform', `translate(${coords.x + offsetX}, ${coords.y + offsetY})`);
+                }
             });
         });
 
@@ -562,7 +582,7 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 2. CAMERA ENGINE: FIXED & STEADY (NO AGGRESSIVE JITTER)
+    // 2. CAMERA ENGINE: SMOOTH & CONTINUOUS FLOW
     // ========================================================
     setupCameraGestures() {
         const viewport = document.getElementById('board-viewport');
@@ -571,14 +591,15 @@ class OcaGameApp {
 
         let isDown = false;
 
-        // Manual drag when user explicitly wants to explore
+        // Manual drag when user is zoomed in and wants to pan
         viewport.addEventListener('pointerdown', (e) => {
             if (e.target.closest('.board-camera-controls')) return;
-            if (!this.camera.isZoomed) return; // In fixed view, no drag needed
+            if (!this.camera.isZoomed) return;
 
             isDown = true;
             this.camera.isDragging = true;
             cameraEl.classList.remove('camera-smooth');
+            cameraEl.style.transition = 'none';
             this.camera.startX = e.clientX;
             this.camera.startY = e.clientY;
             this.camera.camStartX = this.camera.x;
@@ -607,6 +628,7 @@ class OcaGameApp {
                 this.camera.pinchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
                 this.camera.pinchScale = this.camera.scale;
                 cameraEl.classList.remove('camera-smooth');
+                cameraEl.style.transition = 'none';
             }
         }, { passive: true });
 
@@ -625,54 +647,10 @@ class OcaGameApp {
             }
         }, { passive: true });
 
-        // Camera Buttons
-        const btnAuto = document.getElementById('btn-camera-auto');
-        if (btnAuto) {
-            btnAuto.addEventListener('click', () => {
-                this.actionCameraEnabled = !this.actionCameraEnabled;
-                btnAuto.classList.toggle('active', this.actionCameraEnabled);
-                const txt = document.getElementById('cam-auto-text');
-                if (txt) {
-                    txt.textContent = this.actionCameraEnabled ? 'Acción: ON' : 'Acción: OFF';
-                }
-            });
-        }
-
+        // Rule 6: Single toggle button to toggle full out zoom or follow chip
         const btnToggle = document.getElementById('btn-camera-toggle');
         if (btnToggle) {
             btnToggle.addEventListener('click', () => this.toggleCameraZoom());
-        }
-
-        const btnCenterMe = document.getElementById('btn-camera-center-me');
-        if (btnCenterMe) {
-            btnCenterMe.addEventListener('click', () => this.centerOnMyToken());
-        }
-
-        const btnZoomIn = document.getElementById('btn-zoom-in');
-        if (btnZoomIn) {
-            btnZoomIn.addEventListener('click', () => {
-                this.camera.scale = Math.min(this.camera.scale + 0.3, 2.6);
-                this.camera.isZoomed = true;
-                this.updateCameraPillText();
-                this.applyCameraTransform(true);
-            });
-        }
-
-        const btnZoomOut = document.getElementById('btn-zoom-out');
-        if (btnZoomOut) {
-            btnZoomOut.addEventListener('click', () => {
-                this.camera.scale = Math.max(this.camera.scale - 0.3, 1.0);
-                if (this.camera.scale <= 1.05) {
-                    this.resetCameraToFullView();
-                } else {
-                    this.applyCameraTransform(true);
-                }
-            });
-        }
-
-        const btnZoomReset = document.getElementById('btn-zoom-reset');
-        if (btnZoomReset) {
-            btnZoomReset.addEventListener('click', () => this.resetCameraToFullView());
         }
     }
 
@@ -689,46 +667,7 @@ class OcaGameApp {
         cameraEl.style.transform = `translate3d(${this.camera.x}px, ${this.camera.y}px, 0) scale(${this.camera.scale})`;
     }
 
-    toggleCameraZoom() {
-        this.camera.isZoomed = !this.camera.isZoomed;
-        this.updateCameraPillText();
-
-        if (this.camera.isZoomed) {
-            const isMobile = window.innerWidth <= 768;
-            this.camera.scale = isMobile ? 1.85 : 1.6;
-            this.centerOnMyToken();
-        } else {
-            this.resetCameraToFullView();
-        }
-    }
-
-    updateCameraPillText() {
-        const pill = document.getElementById('btn-camera-toggle');
-        const text = document.getElementById('cam-mode-text');
-        if (!pill || !text) return;
-
-        if (this.camera.isZoomed) {
-            pill.classList.add('active');
-            text.textContent = 'Zoom';
-        } else {
-            pill.classList.remove('active');
-            text.textContent = 'Completo';
-        }
-    }
-
-    resetCameraToFullView() {
-        this.camera.isZoomed = false;
-        this.camera.scale = 1.0;
-        this.camera.x = 0;
-        this.camera.y = 0;
-        this.updateCameraPillText();
-        this.applyCameraTransform(true);
-    }
-
-    // Soft single-glide only after moves, avoiding jitter or dizziness
-    softGlideToTile(tileNum) {
-        if (!this.camera.isZoomed) return;
-
+    calculateTargetCameraXY(tileNum) {
         const viewport = document.getElementById('board-viewport');
         if (!viewport || this.boardCoords.length === 0) return;
 
@@ -751,18 +690,98 @@ class OcaGameApp {
 
         this.camera.x = (vW / 2) - (tileX * this.camera.scale);
         this.camera.y = (vH / 2) - (tileY * this.camera.scale);
-        this.applyCameraTransform(true);
     }
 
+    // Rule 2 & 6: Smooth zoom into a specific token
+    zoomInToToken(tileNum, duration = 0.85) {
+        const isMobile = window.innerWidth <= 768;
+        this.camera.scale = isMobile ? 1.85 : 1.5;
+        this.camera.isZoomed = true;
+        this.updateCameraPillText();
+        this.calculateTargetCameraXY(tileNum);
+
+        const cameraEl = document.getElementById('board-camera');
+        if (cameraEl) {
+            cameraEl.style.transition = `transform ${duration}s cubic-bezier(0.22, 1, 0.36, 1)`;
+            cameraEl.classList.add('camera-smooth');
+            this.applyCameraTransform(true);
+        }
+    }
+
+    // Rule 5: Continuous flow camera glide - target final_pos over entire hop duration
+    glideContinuousToTile(tileNum, durationSeconds) {
+        if (!this.camera.isZoomed) return;
+        this.calculateTargetCameraXY(tileNum);
+
+        const cameraEl = document.getElementById('board-camera');
+        if (cameraEl) {
+            cameraEl.style.transition = `transform ${durationSeconds}s cubic-bezier(0.25, 1, 0.36, 1)`;
+            this.applyCameraTransform(true);
+        }
+    }
+
+    // Rule 1 & 3: Reset to full board overview
+    resetCameraToFullView(duration = 0.85) {
+        this.camera.isZoomed = false;
+        this.camera.scale = 1.0;
+        this.camera.x = 0;
+        this.camera.y = 0;
+        this.updateCameraPillText();
+
+        const cameraEl = document.getElementById('board-camera');
+        if (cameraEl) {
+            cameraEl.style.transition = `transform ${duration}s cubic-bezier(0.22, 1, 0.36, 1)`;
+            cameraEl.classList.add('camera-smooth');
+            this.applyCameraTransform(true);
+        }
+    }
+
+    // Rule 6: Toggle camera between full out zoom and following chip
+    toggleCameraZoom() {
+        if (this.camera.isZoomed) {
+            this.followMyChip = false;
+            this.resetCameraToFullView(0.85);
+        } else {
+            this.followMyChip = true;
+            const myPos = this.playerPositions[this.myId] ?? 0;
+            this.zoomInToToken(myPos, 0.85);
+        }
+    }
+
+    updateCameraPillText() {
+        const pill = document.getElementById('btn-camera-toggle');
+        const text = document.getElementById('cam-mode-text');
+        const icon = document.getElementById('cam-icon');
+        if (!pill || !text) return;
+
+        if (this.camera.isZoomed) {
+            pill.classList.add('active');
+            text.textContent = 'Vista Completa';
+            if (icon) icon.textContent = '🗺️';
+        } else {
+            pill.classList.remove('active');
+            text.textContent = 'Seguir Mi Ficha';
+            if (icon) icon.textContent = '🎯';
+        }
+    }
+
+    // Center on current player token (fallback / manual)
     centerOnMyToken() {
         if (!this.room || !this.myId) return;
         const me = this.room.players.find(p => p.id === this.myId);
-        const targetPos = me ? me.position : 1;
-        const isMobile = window.innerWidth <= 768;
-        this.camera.scale = isMobile ? 1.85 : 1.6;
-        this.camera.isZoomed = true;
-        this.updateCameraPillText();
-        this.softGlideToTile(targetPos);
+        const targetPos = me ? me.position : 0;
+        this.zoomInToToken(targetPos, 0.85);
+    }
+
+    softGlideToTile(tileNum, duration = 0.85) {
+        if (!this.camera.isZoomed) return;
+        this.calculateTargetCameraXY(tileNum);
+        const cameraEl = document.getElementById('board-camera');
+        if (cameraEl) {
+            cameraEl.style.transition = `transform ${duration}s cubic-bezier(0.22, 1, 0.36, 1)`;
+            cameraEl.classList.add('camera-smooth');
+            this.applyCameraTransform(true);
+        }
     }
 
     updateRaceRadar() {
@@ -881,38 +900,42 @@ class OcaGameApp {
     // ========================================================
     async handleTurnEvent(event) {
         this.isAnimating = true;
+        this.activeMovingPlayerId = event.player_id;
         const rollBtn = document.getElementById('btn-roll-dice');
         if (rollBtn) rollBtn.disabled = true;
 
         const path = event.path || [];
         const isMyTurn = (event.player_id === this.myId);
 
-        // Where was the token resting before this roll?
-        let currentPos = this.playerPositions[event.player_id];
-        if (currentPos === undefined) {
-            currentPos = (path.length > 0 && path[0] > 0) ? (path[0] - 1) : 0;
-            this.playerPositions[event.player_id] = currentPos;
+        // Crucial fix: The token must start anchored at start_pos before roll
+        let startPos = event.start_pos;
+        if (startPos === undefined || startPos === null) {
+            startPos = (path.length > 0 && path[0] > 0) ? (path[0] - 1) : 0;
         }
 
-        // Keep token locked at its real current spot before dice roll
-        this.moveTokenTo(event.player_id, currentPos);
+        this.playerPositions[event.player_id] = startPos;
+        this.moveTokenTo(event.player_id, startPos);
 
-        // 1. ACTION CAMERA: Smoothly Zoom IN ONLY when it's MY turn (if not already zoomed)
-        if (this.actionCameraEnabled && isMyTurn) {
-            const isMobile = window.innerWidth <= 768;
-            this.camera.scale = isMobile ? 1.85 : 1.5;
-            this.camera.isZoomed = true;
-            this.updateCameraPillText();
-            this.softGlideToTile(currentPos);
+        // Rule 2: If it is my turn and followMyChip is enabled, ensure we are zoomed in to start_pos
+        if (isMyTurn && this.followMyChip && !this.camera.isZoomed) {
+            this.zoomInToToken(startPos, 0.7);
+            await this.sleep(300);
         }
 
-        // 2. Animate 3D Dice Roll
+        // Animate 3D Dice Roll
         this.animateDiceRoll(event.dice, event.total);
         if (window.ocaAudio) window.ocaAudio.playDiceRoll();
 
         await this.sleep(700);
 
-        // 3. Token hops step by step - sequentially along path!
+        // Rule 5: Continuous flow camera glide following the chip slowly to its final destination
+        const hopStepTime = 220; // ms
+        const totalHopTimeSec = Math.max((path.length * hopStepTime) / 1000, 0.8);
+        if (isMyTurn && this.camera.isZoomed) {
+            this.glideContinuousToTile(event.final_pos, totalHopTimeSec);
+        }
+
+        // Token hops step by step sequentially along path
         if (path.length > 0) {
             for (let i = 0; i < path.length; i++) {
                 const stepPos = path[i];
@@ -921,25 +944,16 @@ class OcaGameApp {
                 this.highlightCard(stepPos);
 
                 if (window.ocaAudio) window.ocaAudio.playStep();
-
-                // Gentle midway catch-up ONLY if it's my turn
-                if (this.actionCameraEnabled && isMyTurn && path.length > 5 && i === Math.floor(path.length / 2)) {
-                    this.softGlideToTile(stepPos);
-                }
-
-                await this.sleep(220);
+                await this.sleep(hopStepTime);
             }
         }
 
-        // 4. Focus on landed tile
+        // Landed at final position
         this.playerPositions[event.player_id] = event.final_pos;
         this.moveTokenTo(event.player_id, event.final_pos);
         this.highlightCard(event.final_pos);
-        if ((this.actionCameraEnabled && isMyTurn) || this.camera.isZoomed) {
-            this.softGlideToTile(event.final_pos);
-        }
 
-        // 5. Special Tile Triggers & Rhymes
+        // Special Tile Triggers & Rhymes
         if (event.rhyme) {
             this.showRhymeBanner(event.tile_type, event.rhyme);
         }
@@ -966,25 +980,28 @@ class OcaGameApp {
             }
         }
 
-        // 6. Log & Radar update
+        // Log & Radar update
         this.addLogEntry(event);
         this.updateRaceRadar();
 
-        // 7. Handle Win
+        // Handle Win
         if (event.is_win) {
             this.showVictoryModal(event.player_name);
             this.startConfetti();
         }
 
-        // 8. PAUSE to let the user admire the landed card and read the rhyme!
+        // Pause to let the user admire the landed card and read the rhyme!
         await this.sleep(1350);
 
-        // 9. ACTION CAMERA: Smoothly Zoom OUT to full board overview after my turn!
-        if (this.actionCameraEnabled && isMyTurn && !event.is_win) {
-            this.resetCameraToFullView();
+        // Rule 3: Once the turn is done, finish moving and don't have any more actions,
+        // zoom out to the full board and watch the others play!
+        // If event.extra_turn is true (e.g. Oca or Puente), stay zoomed in for next roll!
+        if (isMyTurn && !event.extra_turn && !event.is_win) {
+            this.resetCameraToFullView(0.85);
             await this.sleep(600);
         }
 
+        this.activeMovingPlayerId = null;
         this.isAnimating = false;
         this.renderPlayerTokens();
         this.updateTurnControls();
@@ -1039,7 +1056,11 @@ class OcaGameApp {
     }
 
     moveTokenTo(playerId, tileNum) {
-        const token = document.getElementById(`token-group-${playerId}`);
+        let token = document.getElementById(`token-group-${playerId}`);
+        if (!token) {
+            this.renderPlayerTokens();
+            token = document.getElementById(`token-group-${playerId}`);
+        }
         const coords = this.boardCoords[tileNum];
         if (!token || !coords) return;
 
@@ -1238,17 +1259,15 @@ class OcaGameApp {
         }
 
         const currPlayer = this.room.players[this.room.current_turn];
-        if (currPlayer && currPlayer.id === this.myId && !currPlayer.is_bot) {
+        const isMyTurn = currPlayer && (currPlayer.id === this.myId) && !currPlayer.is_bot;
+
+        if (isMyTurn) {
             rollBtn.disabled = false;
 
-            // Smoothly Zoom IN on my token BEFORE I throw the dice!
-            if (this.actionCameraEnabled && !this.camera.isZoomed && !this.isAnimating) {
-                const myPos = currPlayer.position || 0;
-                const isMobile = window.innerWidth <= 768;
-                this.camera.scale = isMobile ? 1.85 : 1.5;
-                this.camera.isZoomed = true;
-                this.updateCameraPillText();
-                this.softGlideToTile(myPos);
+            // Rule 2: Zoom in to your chip when it is your turn!
+            if (this.followMyChip && !this.camera.isZoomed && !this.isAnimating) {
+                const myPos = this.playerPositions[this.myId] ?? currPlayer.position ?? 0;
+                this.zoomInToToken(myPos, 0.85);
             }
         } else {
             rollBtn.disabled = true;
