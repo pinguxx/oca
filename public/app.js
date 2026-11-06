@@ -22,6 +22,10 @@ class OcaGameApp {
         this.followMyChip = true;
         this.activeMovingPlayerId = null;
 
+        // Sequential Turn Queue (prevents race conditions between human and bots)
+        this.turnQueue = [];
+        this.isProcessingQueue = false;
+
         this.camera = {
             x: 0,
             y: 0,
@@ -517,18 +521,35 @@ class OcaGameApp {
         `;
     }
 
+    ensureTokenElement(player) {
+        let tokenEl = document.getElementById(`token-group-${player.id}`);
+        if (!tokenEl) {
+            const tokensGroup = document.getElementById('svg-tokens-group');
+            if (!tokensGroup) return null;
+
+            tokenEl = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            tokenEl.setAttribute('id', `token-group-${player.id}`);
+            tokenEl.setAttribute('class', 'token-group');
+            tokenEl.innerHTML = `
+                <circle class="token-circle" r="20" fill="${player.color}"/>
+                <circle r="17.5" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.8"/>
+                <text class="token-avatar" y="0">${player.avatar}</text>
+            `;
+            const pos = this.playerPositions[player.id] ?? player.position ?? 0;
+            const coords = this.boardCoords[pos] || this.boardCoords[0];
+            tokenEl.setAttribute('transform', `translate(${coords.x}, ${coords.y})`);
+            tokensGroup.appendChild(tokenEl);
+        }
+        return tokenEl;
+    }
+
     renderPlayerTokens() {
         const tokensGroup = document.getElementById('svg-tokens-group');
         if (!tokensGroup || !this.room) return;
 
-        const activePlayerIds = new Set(this.room.players.map(p => p.id));
-
-        // Remove tokens for players who are no longer in the room
-        Array.from(tokensGroup.children).forEach(child => {
-            const id = child.id ? child.id.replace('token-group-', '') : '';
-            if (id && !activePlayerIds.has(id)) {
-                tokensGroup.removeChild(child);
-            }
+        // Ensure all active players have persistent tokens in DOM
+        this.room.players.forEach(p => {
+            this.ensureTokenElement(p);
         });
 
         // Group players by current position to compute multi-player offsets
@@ -548,7 +569,7 @@ class OcaGameApp {
             const totalOnTile = playersOnTile.length;
 
             playersOnTile.forEach((player, idx) => {
-                // If this token is currently in the middle of hopping animation, do not override its transform!
+                // If this token is currently hopping in active animation, do not override its transform!
                 if (this.activeMovingPlayerId === player.id) return;
 
                 let offsetX = 0;
@@ -560,19 +581,8 @@ class OcaGameApp {
                     offsetY = Math.sin(angle) * radius;
                 }
 
-                let tokenEl = document.getElementById(`token-group-${player.id}`);
-                if (!tokenEl) {
-                    tokenEl = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                    tokenEl.setAttribute('id', `token-group-${player.id}`);
-                    tokenEl.setAttribute('class', 'token-group');
-                    tokenEl.innerHTML = `
-                        <circle class="token-circle" r="20" fill="${player.color}"/>
-                        <circle r="17.5" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.8"/>
-                        <text class="token-avatar" y="0">${player.avatar}</text>
-                    `;
-                    tokenEl.setAttribute('transform', `translate(${coords.x + offsetX}, ${coords.y + offsetY})`);
-                    tokensGroup.appendChild(tokenEl);
-                } else {
+                const tokenEl = this.ensureTokenElement(player);
+                if (tokenEl) {
                     tokenEl.setAttribute('transform', `translate(${coords.x + offsetX}, ${coords.y + offsetY})`);
                 }
             });
@@ -708,15 +718,16 @@ class OcaGameApp {
         }
     }
 
-    // Rule 5: Continuous flow camera glide - target final_pos over entire hop duration
-    glideContinuousToTile(tileNum, durationSeconds) {
+    // Rule 5: Camera slowly and steadily tracks each hop step
+    trackStepWithCamera(tileNum, durationSec = 0.24) {
         if (!this.camera.isZoomed) return;
         this.calculateTargetCameraXY(tileNum);
 
         const cameraEl = document.getElementById('board-camera');
         if (cameraEl) {
-            cameraEl.style.transition = `transform ${durationSeconds}s cubic-bezier(0.25, 1, 0.36, 1)`;
-            this.applyCameraTransform(true);
+            cameraEl.style.transition = `transform ${durationSec}s linear`;
+            cameraEl.classList.remove('camera-smooth');
+            this.applyCameraTransform(false);
         }
     }
 
@@ -879,7 +890,7 @@ class OcaGameApp {
                 break;
 
             case 'turn_event':
-                this.handleTurnEvent(data.event);
+                this.enqueueTurnEvent(data.event);
                 break;
 
             case 'chat_message':
@@ -896,8 +907,33 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 5. GAME FLOW & CINEMATIC ACTION CAMERA
+    // 5. GAME FLOW & CINEMATIC ACTION CAMERA (QUEUE-DRIVEN)
     // ========================================================
+    enqueueTurnEvent(event) {
+        this.turnQueue.push(event);
+        this.processTurnQueue();
+    }
+
+    async processTurnQueue() {
+        if (this.isProcessingQueue) return;
+        this.isProcessingQueue = true;
+
+        while (this.turnQueue.length > 0) {
+            const nextEvent = this.turnQueue.shift();
+            try {
+                await this.handleTurnEvent(nextEvent);
+            } catch (err) {
+                console.error('Error procesando evento de turno:', err);
+            }
+        }
+
+        this.isProcessingQueue = false;
+        this.activeMovingPlayerId = null;
+        this.isAnimating = false;
+        this.renderPlayerTokens();
+        this.updateTurnControls();
+    }
+
     async handleTurnEvent(event) {
         this.isAnimating = true;
         this.activeMovingPlayerId = event.player_id;
@@ -907,11 +943,10 @@ class OcaGameApp {
         const path = event.path || [];
         const isMyTurn = (event.player_id === this.myId);
 
-        // Crucial fix: The token must start anchored at start_pos before roll
-        let startPos = event.start_pos;
-        if (startPos === undefined || startPos === null) {
-            startPos = (path.length > 0 && path[0] > 0) ? (path[0] - 1) : 0;
-        }
+        // Crucial fix: The token must start anchored at event.from_pos before roll
+        const startPos = (event.from_pos !== undefined && event.from_pos !== null)
+            ? event.from_pos
+            : (this.playerPositions[event.player_id] ?? 0);
 
         this.playerPositions[event.player_id] = startPos;
         this.moveTokenTo(event.player_id, startPos);
@@ -928,14 +963,9 @@ class OcaGameApp {
 
         await this.sleep(700);
 
-        // Rule 5: Continuous flow camera glide following the chip slowly to its final destination
-        const hopStepTime = 220; // ms
-        const totalHopTimeSec = Math.max((path.length * hopStepTime) / 1000, 0.8);
-        if (isMyTurn && this.camera.isZoomed) {
-            this.glideContinuousToTile(event.final_pos, totalHopTimeSec);
-        }
-
         // Token hops step by step sequentially along path
+        // Rule 5: Camera slowly and steadily tracks the chip on each step in a continuous flow
+        const hopStepTime = 240; // ms per hop
         if (path.length > 0) {
             for (let i = 0; i < path.length; i++) {
                 const stepPos = path[i];
@@ -944,14 +974,31 @@ class OcaGameApp {
                 this.highlightCard(stepPos);
 
                 if (window.ocaAudio) window.ocaAudio.playStep();
+
+                if (isMyTurn && this.camera.isZoomed) {
+                    this.trackStepWithCamera(stepPos, 0.24);
+                }
+
                 await this.sleep(hopStepTime);
             }
         }
 
-        // Landed at final position
-        this.playerPositions[event.player_id] = event.final_pos;
-        this.moveTokenTo(event.player_id, event.final_pos);
-        this.highlightCard(event.final_pos);
+        // Handle intermediate vs final jump (Oca chain, Puente, Muerte, Laberinto)
+        const lastStep = path.length > 0 ? path[path.length - 1] : startPos;
+        if (event.final_pos !== lastStep) {
+            await this.sleep(200);
+            this.playerPositions[event.player_id] = event.final_pos;
+            this.moveTokenTo(event.player_id, event.final_pos);
+            this.highlightCard(event.final_pos);
+
+            if (isMyTurn && this.camera.isZoomed) {
+                this.softGlideToTile(event.final_pos, 0.65);
+            }
+        } else {
+            this.playerPositions[event.player_id] = event.final_pos;
+            this.moveTokenTo(event.player_id, event.final_pos);
+            this.highlightCard(event.final_pos);
+        }
 
         // Special Tile Triggers & Rhymes
         if (event.rhyme) {
@@ -1003,8 +1050,6 @@ class OcaGameApp {
 
         this.activeMovingPlayerId = null;
         this.isAnimating = false;
-        this.renderPlayerTokens();
-        this.updateTurnControls();
     }
 
     highlightCard(tileNum) {
@@ -1056,11 +1101,8 @@ class OcaGameApp {
     }
 
     moveTokenTo(playerId, tileNum) {
-        let token = document.getElementById(`token-group-${playerId}`);
-        if (!token) {
-            this.renderPlayerTokens();
-            token = document.getElementById(`token-group-${playerId}`);
-        }
+        const player = this.room?.players?.find(p => p.id === playerId);
+        const token = player ? this.ensureTokenElement(player) : document.getElementById(`token-group-${playerId}`);
         const coords = this.boardCoords[tileNum];
         if (!token || !coords) return;
 
@@ -1244,7 +1286,7 @@ class OcaGameApp {
         }
 
         this.updateTurnControls();
-        if (!this.isAnimating) {
+        if (!this.isProcessingQueue && !this.isAnimating) {
             this.renderPlayerTokens();
         }
     }
@@ -1253,7 +1295,7 @@ class OcaGameApp {
         const rollBtn = document.getElementById('btn-roll-dice');
         if (!rollBtn || !this.room) return;
 
-        if (this.room.status !== 'playing' || this.isAnimating) {
+        if (this.room.status !== 'playing' || this.isAnimating || this.isProcessingQueue) {
             rollBtn.disabled = true;
             return;
         }
@@ -1265,7 +1307,7 @@ class OcaGameApp {
             rollBtn.disabled = false;
 
             // Rule 2: Zoom in to your chip when it is your turn!
-            if (this.followMyChip && !this.camera.isZoomed && !this.isAnimating) {
+            if (this.followMyChip && !this.camera.isZoomed && !this.isAnimating && !this.isProcessingQueue) {
                 const myPos = this.playerPositions[this.myId] ?? currPlayer.position ?? 0;
                 this.zoomInToToken(myPos, 0.85);
             }

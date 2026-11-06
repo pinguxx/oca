@@ -129,7 +129,7 @@ pub fn maybe_schedule_bot_turn(state: AppState, room_code: String, delay_ms: u64
             let bot_id = curr.id.clone();
             match room.roll_dice(&bot_id) {
                 Ok(event) => {
-                    let wait_ms = (event.path.len() as u64 * 320) + 1200;
+                    let wait_ms = (event.path.len() as u64 * 250) + 2600;
                     turn_event_payload = Some(json!({
                         "type": "turn_event",
                         "event": event
@@ -449,7 +449,7 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                     if let Some(room) = rooms_guard.get_mut(code) {
                         match room.roll_dice(p_id) {
                             Ok(event) => {
-                                let wait_ms = (event.path.len() as u64 * 320) + 1200;
+                                let wait_ms = (event.path.len() as u64 * 250) + 2600;
                                 turn_event_payload = Some(json!({
                                     "type": "turn_event",
                                     "event": event
