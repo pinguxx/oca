@@ -63,9 +63,9 @@ impl BoardDefinition {
             target_tile: None,
             extra_turn: false,
             skip_turns: 0,
-            col: 0,
-            row: 7,
-            x_pct: 3.8,
+            col: 3,
+            row: 8,
+            x_pct: 31.0,
             y_pct: 91.5,
             angle_deg: 0.0,
         });
@@ -99,101 +99,57 @@ impl BoardDefinition {
         }
     }
 
-    /// Generates coordinates for the classic Montecarlo / Fournier rectangular board
+    /// Generates coordinates for the authentic continuous circular / oval spiral board
     pub fn generate_montecarlo_coordinates() -> Vec<(u8, u8, f32, f32, f32)> {
-        const MIN_X: f32 = 72.0;
-        const MAX_X: f32 = 928.0;
-        const MIN_Y: f32 = 48.0;
-        const MAX_Y: f32 = 744.0;
+        const CX: f32 = 500.0;
+        const CY: f32 = 460.0;
+        const THETA_START: f32 = 105.0 * std::f32::consts::PI / 180.0;
+        const TOTAL_ROT: f32 = 2.85 * 2.0 * std::f32::consts::PI;
+        const R_START: f32 = 420.0;
+        const R_END: f32 = 120.0;
+        const N_SAMPLES: usize = 2000;
 
         let to_xpct = |x: f32| ((x / 1000.0) * 100.0 * 10.0).round() / 10.0;
-        let to_ypct = |y: f32| ((y / 820.0) * 100.0 * 10.0).round() / 10.0;
+        let to_ypct = |y: f32| ((y / 920.0) * 100.0 * 10.0).round() / 10.0;
+
+        let mut samples = Vec::with_capacity(N_SAMPLES + 1);
+        let mut total_length = 0.0f32;
+
+        for s in 0..=N_SAMPLES {
+            let u = s as f32 / N_SAMPLES as f32;
+            let theta = THETA_START + u * TOTAL_ROT;
+            let rx = R_START + (R_END - R_START) * u;
+            let ry = rx * (380.0 / 420.0);
+            let x = CX + rx * theta.cos();
+            let y = CY + ry * theta.sin();
+
+            if s > 0 {
+                let (px, py, _): (f32, f32, f32) = samples[s - 1];
+                let d = ((x - px).powi(2) + (y - py).powi(2)).sqrt();
+                total_length += d;
+            }
+            samples.push((x, y, total_length));
+        }
 
         let mut list = Vec::with_capacity(TOTAL_TILES as usize);
+        let step_dist = total_length / 62.0;
 
-        // --- Ring 1 (Outer Perimeter) ---
-        // 1..=10: Bottom row (left to right)
-        let w1 = (MAX_X - MIN_X) / 10.0;
-        for i in 1..=10 {
-            let x = MIN_X + (i as f32 - 0.5) * w1;
-            let y = MAX_Y;
-            list.push((i, 7, to_xpct(x), to_ypct(y), 0.0));
+        for i in 1..=62 {
+            let target_dist = (i - 1) as f32 * step_dist;
+            let mut best = samples[0];
+            for sample in &samples {
+                if sample.2 >= target_dist {
+                    best = *sample;
+                    break;
+                }
+            }
+            let col = (best.0 / 100.0) as u8;
+            let row = (best.1 / 100.0) as u8;
+            list.push((col, row, to_xpct(best.0), to_ypct(best.1), 0.0));
         }
 
-        // 11..=17: Right column (bottom to top)
-        let h1 = (MAX_Y - MIN_Y - 168.0) / 7.0;
-        for i in 11..=17 {
-            let x = MAX_X;
-            let y = (MAX_Y - 84.0) - (i as f32 - 10.0 - 0.5) * h1;
-            list.push((10, 7 - (i - 10), to_xpct(x), to_ypct(y), 270.0));
-        }
-
-        // 18..=28: Top row (right to left)
-        let w2 = (MAX_X - MIN_X) / 11.0;
-        for i in 18..=28 {
-            let x = MAX_X - (i as f32 - 17.0 - 0.5) * w2;
-            let y = MIN_Y;
-            list.push((11 - (i - 17), 0, to_xpct(x), to_ypct(y), 180.0));
-        }
-
-        // 29..=33: Left column (top to bottom)
-        let h2 = (MAX_Y - MIN_Y - 168.0) / 5.0;
-        for i in 29..=33 {
-            let x = MIN_X;
-            let y = (MIN_Y + 84.0) + (i as f32 - 28.0 - 0.5) * h2;
-            list.push((0, i - 28, to_xpct(x), to_ypct(y), 90.0));
-        }
-
-        // --- Ring 2 (Middle Loop) ---
-        let min_x2 = MIN_X + 86.0;
-        let max_x2 = MAX_X - 86.0;
-        let min_y2 = MIN_Y + 86.0;
-        let max_y2 = MAX_Y - 86.0;
-
-        // 34..=40: Bottom inner row (left to right)
-        let w3 = (max_x2 - min_x2) / 7.0;
-        for i in 34..=40 {
-            let x = min_x2 + (i as f32 - 33.0 - 0.5) * w3;
-            let y = max_y2;
-            list.push((i - 33, 6, to_xpct(x), to_ypct(y), 0.0));
-        }
-
-        // 41..=46: Right inner column (bottom to top)
-        let h3 = (max_y2 - min_y2 - 152.0) / 6.0;
-        for i in 41..=46 {
-            let x = max_x2;
-            let y = (max_y2 - 76.0) - (i as f32 - 40.0 - 0.5) * h3;
-            list.push((9, 6 - (i - 40), to_xpct(x), to_ypct(y), 270.0));
-        }
-
-        // 47..=51: Top inner row (right to left)
-        let w4 = (max_x2 - min_x2 - 78.0) / 5.0;
-        for i in 47..=51 {
-            let x = (max_x2 - 78.0) - (i as f32 - 46.0 - 0.5) * w4;
-            let y = min_y2;
-            list.push((8 - (i - 46), 1, to_xpct(x), to_ypct(y), 180.0));
-        }
-
-        // 52: Cárcel (Left inner)
-        let x52 = min_x2;
-        let y52 = min_y2 + 76.0;
-        list.push((1, 2, to_xpct(x52), to_ypct(y52), 90.0));
-
-        // --- Ring 3 (Innermost Loop) ---
-        let min_x3 = min_x2 + 80.0;
-        let max_x3 = max_x2 - 78.0;
-        let max_y3 = max_y2 - 76.0;
-
-        // 53..=62: Bottom innermost row (left to right)
-        let w5 = (max_x3 - min_x3) / 10.0;
-        for i in 53..=62 {
-            let x = min_x3 + (i as f32 - 52.0 - 0.5) * w5;
-            let y = max_y3;
-            list.push((i - 52, 5, to_xpct(x), to_ypct(y), 0.0));
-        }
-
-        // 63: Gran Oca / Meta
-        list.push((7, 3, 67.0, 44.0, 0.0));
+        // Casilla 63: Center of the spiral
+        list.push((5, 5, to_xpct(CX), to_ypct(CY), 0.0));
 
         list
     }

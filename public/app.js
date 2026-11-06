@@ -82,17 +82,17 @@ class OcaGameApp {
             this.boardDef = this.generateFallbackBoard();
         }
 
-        // Map coordinates for 1000x820 SVG viewport
+        // Map coordinates for 1000x920 SVG viewport
         this.boardCoords = this.boardDef.map(tile => {
             const x = (tile.x_pct / 100.0) * 1000;
-            const y = (tile.y_pct / 100.0) * 820;
+            const y = (tile.y_pct / 100.0) * 920;
             return { x, y, tile };
         });
     }
 
     generateFallbackBoard() {
         const tiles = [];
-        tiles.push({ number: 0, tile_type: 'normal', name: 'Salida', x_pct: 3.8, y_pct: 91.5 });
+        tiles.push({ number: 0, tile_type: 'normal', name: 'Salida', x_pct: 31.0, y_pct: 91.5 });
         for (let i = 1; i <= 63; i++) {
             let t = 'normal';
             if ([5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59].includes(i)) t = 'oca';
@@ -112,8 +112,8 @@ class OcaGameApp {
 
     renderMontecarloBoard() {
         this.renderCornerRosettes();
+        this.renderSalida();
         this.renderSpiralTrack();
-        this.renderCenterCourtArt();
         this.renderTilesCards();
         this.renderGranOcaGarden();
         this.renderPlayerTokens();
@@ -126,10 +126,10 @@ class OcaGameApp {
         group.innerHTML = '';
 
         const corners = [
-            { x: 50, y: 46 },
-            { x: 950, y: 46 },
-            { x: 950, y: 774 },
-            { x: 50, y: 774 }
+            { x: 55, y: 55 },
+            { x: 945, y: 55 },
+            { x: 945, y: 865 },
+            { x: 55, y: 865 }
         ];
 
         corners.forEach(({ x, y }) => {
@@ -152,111 +152,69 @@ class OcaGameApp {
         });
     }
 
-    // Golden winding trail connecting all tiles 1..=63 into a single coherent spiral
+    // Vintage Salida Checkered Starting Post (Casilla 0)
+    renderSalida() {
+        const group = document.getElementById('svg-salida-group');
+        if (!group) return;
+        group.innerHTML = '';
+
+        const coord = this.boardCoords[0] || { x: 310, y: 842 };
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', `translate(${coord.x}, ${coord.y})`);
+        g.innerHTML = `
+            <!-- Vintage Salida Base Banner -->
+            <rect x="-42" y="-24" width="84" height="48" rx="8" fill="#f8edeb" stroke="#851e1e" stroke-width="2.5" filter="url(#cardShadow)"/>
+            <rect x="-38" y="-20" width="76" height="40" rx="6" fill="none" stroke="#d4af37" stroke-width="1.5"/>
+            <text x="0" y="-3" text-anchor="middle" font-size="18">🏁</text>
+            <text x="0" y="14" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="10.5" fill="#851e1e" letter-spacing="1">SALIDA</text>
+        `;
+        group.appendChild(g);
+    }
+
+    // Golden winding trail connecting all tiles 0..=63 into a continuous spiral ribbon
     renderSpiralTrack() {
         const group = document.getElementById('svg-spiral-track');
         if (!group || this.boardCoords.length === 0) return;
         group.innerHTML = '';
 
         let pathD = '';
-        for (let i = 1; i <= 63; i++) {
+        for (let i = 0; i <= 63; i++) {
             const coord = this.boardCoords[i];
             if (!coord) continue;
-            pathD += (pathD === '' ? `M ${coord.x} ${coord.y}` : ` L ${coord.x} ${coord.y}`);
+            pathD += (pathD === '' ? `M ${coord.x.toFixed(1)} ${coord.y.toFixed(1)}` : ` L ${coord.x.toFixed(1)} ${coord.y.toFixed(1)}`);
         }
 
-        const pathBg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        pathBg.setAttribute('d', pathD);
-        pathBg.setAttribute('fill', 'none');
-        pathBg.setAttribute('stroke', '#ffd166');
-        pathBg.setAttribute('stroke-width', '18');
-        pathBg.setAttribute('stroke-opacity', '0.35');
-        pathBg.setAttribute('stroke-linecap', 'round');
-        pathBg.setAttribute('stroke-linejoin', 'round');
+        const pathBase = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathBase.setAttribute('d', pathD);
+        pathBase.setAttribute('fill', 'none');
+        pathBase.setAttribute('stroke', '#f8edeb');
+        pathBase.setAttribute('stroke-width', '54');
+        pathBase.setAttribute('stroke-linecap', 'round');
+        pathBase.setAttribute('stroke-linejoin', 'round');
+        pathBase.setAttribute('opacity', '0.75');
+
+        const pathBorder = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathBorder.setAttribute('d', pathD);
+        pathBorder.setAttribute('fill', 'none');
+        pathBorder.setAttribute('stroke', '#d4af37');
+        pathBorder.setAttribute('stroke-width', '50');
+        pathBorder.setAttribute('stroke-linecap', 'round');
+        pathBorder.setAttribute('stroke-linejoin', 'round');
+        pathBorder.setAttribute('opacity', '0.4');
 
         const pathLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         pathLine.setAttribute('d', pathD);
         pathLine.setAttribute('fill', 'none');
         pathLine.setAttribute('stroke', '#851e1e');
-        pathLine.setAttribute('stroke-width', '3');
+        pathLine.setAttribute('stroke-width', '2.5');
         pathLine.setAttribute('stroke-dasharray', '8 6');
-        pathLine.setAttribute('stroke-opacity', '0.45');
+        pathLine.setAttribute('stroke-opacity', '0.5');
         pathLine.setAttribute('stroke-linecap', 'round');
 
-        group.appendChild(pathBg);
+        group.appendChild(pathBase);
+        group.appendChild(pathBorder);
         group.appendChild(pathLine);
-    }
-
-    // Majestic Vintage Center Court Medallion (Center of Board)
-    renderCenterCourtArt() {
-        const group = document.getElementById('svg-center-court');
-        if (!group) return;
-        group.innerHTML = '';
-
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('transform', 'translate(390, 350)');
-
-        let rays = '';
-        for (let i = 0; i < 24; i++) {
-            const ang = (i * 15) * Math.PI / 180;
-            const x1 = Math.cos(ang) * 22;
-            const y1 = Math.sin(ang) * 22;
-            const x2 = Math.cos(ang) * 120;
-            const y2 = Math.sin(ang) * 120;
-            rays += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#851e1e" stroke-width="2" stroke-dasharray="4 4" />`;
-        }
-
-        g.innerHTML = `
-            <!-- Vintage Card Base -->
-            <rect x="-175" y="-140" width="350" height="280" rx="16" fill="#fffef7" stroke="#851e1e" stroke-width="3" filter="url(#cardShadow)"/>
-            <rect x="-168" y="-133" width="336" height="266" rx="12" fill="none" stroke="#d4af37" stroke-width="2"/>
-            <rect x="-164" y="-129" width="328" height="258" rx="10" fill="none" stroke="rgba(133,30,30,0.18)" stroke-width="1"/>
-
-            <!-- Radiant Sunburst Pattern -->
-            <g opacity="0.22">
-                ${rays}
-            </g>
-
-            <!-- Rosette / Compass Rose Centerpiece -->
-            <circle cx="0" cy="10" r="54" fill="#fff9db" stroke="#851e1e" stroke-width="2.5"/>
-            <circle cx="0" cy="10" r="46" fill="#2a9d8f" stroke="#d4af37" stroke-width="1.5" opacity="0.85"/>
-            <circle cx="0" cy="10" r="32" fill="#851e1e"/>
-            <circle cx="0" cy="10" r="8" fill="#ffd166"/>
-
-            <!-- 8-Pointed Star (Rosa de los Vientos) -->
-            <polygon points="0,-34 7,3 0,10 -7,3" fill="#ffffff" transform="translate(0, 10)"/>
-            <polygon points="0,54 7,17 0,10 -7,17" fill="#ffffff" transform="translate(0, 10)"/>
-            <polygon points="44,10 7,17 0,10 7,3" fill="#ffffff" transform="translate(0, 10)"/>
-            <polygon points="-44,10 -7,17 0,10 -7,3" fill="#ffffff" transform="translate(0, 10)"/>
-            <polygon points="31,-21 4,3 0,10 7,10" fill="#ffd166" transform="translate(0, 10)"/>
-            <polygon points="-31,-21 -4,3 0,10 -7,10" fill="#ffd166" transform="translate(0, 10)"/>
-            <polygon points="31,41 4,17 0,10 7,10" fill="#ffd166" transform="translate(0, 10)"/>
-            <polygon points="-31,41 -4,17 0,10 -7,10" fill="#ffd166" transform="translate(0, 10)"/>
-
-            <text x="0" y="16" text-anchor="middle" font-size="20">🪿</text>
-
-            <!-- Header Curved Ribbon: EL JUEGO DE LA OCA -->
-            <path d="M -145,-86 Q 0,-110 145,-86 L 138,-56 Q 0,-78 -138,-56 Z" fill="#ffd166" stroke="#851e1e" stroke-width="2.2" filter="url(#cardShadow)"/>
-            <text x="0" y="-68" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-weight="900" font-size="16" fill="#851e1e" letter-spacing="1.5">EL JUEGO DE LA OCA</text>
-
-            <!-- Subtitle Ribbon -->
-            <rect x="-95" y="-52" width="190" height="20" rx="10" fill="#851e1e"/>
-            <text x="0" y="-38" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="700" font-size="10" fill="#ffd166" letter-spacing="1">EDICIÓN TRADICIONAL</text>
-
-            <!-- Motto Banner at Bottom -->
-            <path d="M -152,94 Q 0,82 152,94 L 144,120 Q 0,108 -144,120 Z" fill="#f8edeb" stroke="#851e1e" stroke-width="1.8"/>
-            <text x="0" y="110" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-style="italic" font-weight="700" font-size="11.5" fill="#851e1e">
-                «De oca a oca y tiro porque me toca»
-            </text>
-
-            <!-- Corner Stars -->
-            <text x="-152" y="-115" font-size="14" fill="#d90429">★</text>
-            <text x="140" y="-115" font-size="14" fill="#d90429">★</text>
-            <text x="-152" y="125" font-size="14" fill="#d90429">★</text>
-            <text x="140" y="125" font-size="14" fill="#d90429">★</text>
-        `;
-
-        group.appendChild(g);
     }
 
     // Render Every Card-Tile (1 to 62)
@@ -267,14 +225,14 @@ class OcaGameApp {
 
         // Alternating Pastel Cardstock Palette (Vintage Montecarlo)
         const palette = ['#caf0f8', '#fefae0', '#d8f3dc', '#ffe5d9', '#e0fbfc', '#fff3b0'];
+        const cardW = 50;
+        const cardH = 56;
 
         for (let i = 1; i <= 62; i++) {
             const coord = this.boardCoords[i];
             if (!coord) continue;
 
             const tile = coord.tile;
-            const cardW = this.getCardWidth(i);
-            const cardH = this.getCardHeight(i);
             const bgColor = this.getTileBgColor(i, tile.tile_type, palette);
 
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -287,18 +245,18 @@ class OcaGameApp {
 
             g.innerHTML = `
                 <!-- Card Container -->
-                <rect class="svg-card-rect" id="rect-card-${i}" x="${-cardW/2}" y="${-cardH/2}" width="${cardW}" height="${cardH}" rx="6" fill="${bgColor}"/>
-                <rect x="${-cardW/2 + 2.5}" y="${-cardH/2 + 2.5}" width="${cardW - 5}" height="${cardH - 5}" rx="4" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>
+                <rect class="svg-card-rect" id="rect-card-${i}" x="${-cardW/2}" y="${-cardH/2}" width="${cardW}" height="${cardH}" rx="7" fill="${bgColor}" stroke="rgba(133,30,30,0.35)" stroke-width="1.2" filter="url(#cardShadow)"/>
+                <rect x="${-cardW/2 + 2}" y="${-cardH/2 + 2}" width="${cardW - 4}" height="${cardH - 4}" rx="5" fill="none" stroke="rgba(212,175,55,0.4)" stroke-width="0.8"/>
 
                 <!-- Vintage Number Badge -->
-                <circle cx="${-cardW/2 + 13}" cy="${-cardH/2 + 13}" r="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.2"/>
-                <text class="svg-card-num-text" x="${-cardW/2 + 13}" y="${-cardH/2 + 13}">${i}</text>
+                <circle cx="${-cardW/2 + 10}" cy="${-cardH/2 + 10}" r="7.5" fill="#ffffff" stroke="#851e1e" stroke-width="1.2"/>
+                <text class="svg-card-num-text" x="${-cardW/2 + 10}" y="${-cardH/2 + 13}" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-weight="900" font-size="8.5" fill="#851e1e">${i}</text>
 
                 <!-- Corner Star Accent -->
-                <text x="${cardW/2 - 14}" y="${-cardH/2 + 14}" font-size="11" fill="#d90429" text-anchor="middle">★</text>
+                <text x="${cardW/2 - 9}" y="${-cardH/2 + 11}" font-size="8.5" fill="#d90429" text-anchor="middle">★</text>
 
                 <!-- Illustrated Scene -->
-                <g transform="translate(0, 4)">
+                <g>
                     ${drawing}
                 </g>
             `;
@@ -307,40 +265,58 @@ class OcaGameApp {
         }
     }
 
-    // Casilla 63: Gran Oca & Winding Ribbon
+    // Casilla 63: Gran Jardín de la Oca (Center of Spiral)
     renderGranOcaGarden() {
         const group = document.getElementById('svg-garden-group');
         if (!group) return;
         group.innerHTML = '';
 
-        const coord = this.boardCoords[63] || { x: 670, y: 360 };
+        const coord = this.boardCoords[63] || { x: 500, y: 460 };
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('id', 'tile-card-63');
+        g.setAttribute('class', 'svg-tile-item tile-meta');
         g.setAttribute('transform', `translate(${coord.x}, ${coord.y})`);
 
+        let rays = '';
+        for (let i = 0; i < 20; i++) {
+            const ang = (i * 18) * Math.PI / 180;
+            const x1 = Math.cos(ang) * 44;
+            const y1 = Math.sin(ang) * 44;
+            const x2 = Math.cos(ang) * 64;
+            const y2 = Math.sin(ang) * 64;
+            rays += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#d4af37" stroke-width="2" stroke-linecap="round"/>`;
+        }
+
         g.innerHTML = `
-            <!-- Golden Card Base -->
-            <rect x="-85" y="-95" width="170" height="190" rx="14" fill="#fff9db" stroke="#851e1e" stroke-width="3.5" filter="url(#cardShadow)"/>
-            <rect x="-80" y="-90" width="160" height="180" rx="10" fill="none" stroke="#d4af37" stroke-width="2"/>
-            <rect x="-76" y="-86" width="152" height="172" rx="8" fill="none" stroke="rgba(133,30,30,0.2)" stroke-width="1"/>
-
-            <!-- Curving Vintage Ribbon: 'JUEGO DE LA OCA' -->
-            <path d="M -75,-65 Q 0,-85 75,-65 L 75,-35 Q 0,-55 -75,-35 Z" fill="#ffd166" stroke="#851e1e" stroke-width="2"/>
-            <text x="0" y="-48" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="14" fill="#851e1e" letter-spacing="0.5">Juego de la Oca</text>
-
-            <!-- Casilla 63 Number Circle -->
-            <circle cx="0" cy="-14" r="18" fill="#d90429" stroke="#ffffff" stroke-width="2.5"/>
-            <text x="0" y="-8" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="17" fill="#ffffff">63</text>
-
-            <!-- Crowned Royal Goose -->
-            <g transform="translate(0, 36)">
-                <path d="M-20,-28 Q-35,-48 0,-42 Q35,-48 20,-28 Z" fill="#ffd166" stroke="#851e1e" stroke-width="1.8"/>
-                <text x="0" y="-22" text-anchor="middle" font-size="20">👑</text>
-                <text x="0" y="16" text-anchor="middle" font-size="46">🦆</text>
+            <!-- Radiating Sunburst Rays -->
+            <g opacity="0.45">
+                ${rays}
             </g>
 
-            <rect x="-55" y="70" width="110" height="20" rx="6" fill="#851e1e"/>
-            <text x="0" y="84" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="11" fill="#ffd166" letter-spacing="1">¡VICTORIA!</text>
+            <!-- Grand Central Altar / Medallion -->
+            <circle class="svg-card-rect" id="rect-card-63" r="66" fill="#fff9db" stroke="#851e1e" stroke-width="3.5" filter="url(#cardShadow)"/>
+            <circle r="60" fill="none" stroke="#d4af37" stroke-width="2.5"/>
+            <circle r="56" fill="#fefae0" stroke="rgba(133,30,30,0.2)" stroke-width="1"/>
+            <circle r="44" fill="#2a9d8f" opacity="0.12"/>
+
+            <!-- Crowned Golden Goose -->
+            <g transform="translate(0, -6)">
+                <text x="0" y="-12" text-anchor="middle" font-size="18">👑</text>
+                <text x="0" y="18" text-anchor="middle" font-size="34">🪿</text>
+            </g>
+
+            <!-- Casilla 63 Badge -->
+            <circle cx="0" cy="-38" r="14" fill="#d90429" stroke="#ffffff" stroke-width="2"/>
+            <text x="0" y="-33.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="13" fill="#ffffff">63</text>
+
+            <!-- ¡VICTORIA! Ribbon at bottom -->
+            <rect x="-45" y="32" width="90" height="18" rx="6" fill="#851e1e" stroke="#d4af37" stroke-width="1.2"/>
+            <text x="0" y="44.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="10" fill="#ffd166" letter-spacing="1">¡VICTORIA!</text>
+
+            <text x="0" y="58" text-anchor="middle" font-family="'Playfair Display', serif" font-style="italic" font-weight="700" font-size="7.5" fill="#851e1e">
+                Gran Jardín de la Oca
+            </text>
         `;
 
         group.appendChild(g);
@@ -348,27 +324,11 @@ class OcaGameApp {
 
     // Helper: Card dimensions based on loop
     getCardWidth(num) {
-        if (num <= 10) return 82;
-        if (num <= 17) return 80;
-        if (num <= 28) return 74;
-        if (num <= 33) return 80;
-        if (num <= 40) return 76;
-        if (num <= 46) return 76;
-        if (num <= 51) return 74;
-        if (num === 52) return 78;
-        return 62; // 53..=62
+        return 50;
     }
 
     getCardHeight(num) {
-        if (num <= 10) return 80;
-        if (num <= 17) return 80;
-        if (num <= 28) return 80;
-        if (num <= 33) return 80;
-        if (num <= 40) return 74;
-        if (num <= 46) return 74;
-        if (num <= 51) return 74;
-        if (num === 52) return 74;
-        return 68; // 53..=62
+        return 56;
     }
 
     getTileBgColor(num, type, palette) {
@@ -388,61 +348,58 @@ class OcaGameApp {
         // Special Tiles
         if (type === 'oca') {
             return `
-                <path d="M-22,13 Q-11,9 0,13 Q11,17 22,13" fill="none" stroke="#2a9d8f" stroke-width="1.8"/>
-                <path d="M-18,17 Q-9,14 0,17 Q9,20 18,17" fill="none" stroke="#457b9d" stroke-width="1.2" opacity="0.6"/>
-                <text x="0" y="8" text-anchor="middle" font-size="24">🦆</text>
-                <rect x="-24" y="16" width="48" height="13" rx="3" fill="#2a9d8f" stroke="#1b4332" stroke-width="0.8"/>
-                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8.5" fill="#ffffff">★ OCA ★</text>
+                <text x="0" y="7" text-anchor="middle" font-size="20">🦆</text>
+                <rect x="-21" y="15" width="42" height="10" rx="3" fill="#2a9d8f" stroke="#1b4332" stroke-width="0.8"/>
+                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">★ OCA ★</text>
             `;
         }
         if (type === 'puente') {
             return `
-                <path d="M-24,13 Q-12,8 0,13 Q12,18 24,13" fill="none" stroke="#0077b6" stroke-width="2"/>
-                <text x="0" y="7" text-anchor="middle" font-size="22">🌉</text>
-                <rect x="-26" y="16" width="52" height="13" rx="3" fill="#0077b6" stroke="#03045e" stroke-width="0.8"/>
-                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">PUENTE</text>
+                <text x="0" y="7" text-anchor="middle" font-size="20">🌉</text>
+                <rect x="-22" y="15" width="44" height="10" rx="3" fill="#0077b6" stroke="#03045e" stroke-width="0.8"/>
+                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">PUENTE</text>
             `;
         }
         if (type === 'dados') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="22">🎲</text>
-                <rect x="-24" y="16" width="48" height="13" rx="3" fill="#7209b7" stroke="#3a0ca3" stroke-width="0.8"/>
-                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">DADOS</text>
+                <text x="0" y="7" text-anchor="middle" font-size="19">🎲</text>
+                <rect x="-21" y="15" width="42" height="10" rx="3" fill="#7209b7" stroke="#3a0ca3" stroke-width="0.8"/>
+                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">DADOS</text>
             `;
         }
         if (type === 'posada') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="22">🏨</text>
-                <rect x="-26" y="16" width="52" height="13" rx="3" fill="#e76f51" stroke="#9d0208" stroke-width="0.8"/>
-                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">POSADA</text>
+                <text x="0" y="7" text-anchor="middle" font-size="19">🏨</text>
+                <rect x="-21" y="15" width="42" height="10" rx="3" fill="#e76f51" stroke="#9d0208" stroke-width="0.8"/>
+                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="6.8" fill="#ffffff">POSADA</text>
             `;
         }
         if (type === 'pozo') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="22">🕳️</text>
-                <rect x="-24" y="16" width="48" height="13" rx="3" fill="#52796f" stroke="#2f3e46" stroke-width="0.8"/>
-                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">POZO</text>
+                <text x="0" y="7" text-anchor="middle" font-size="19">🕳️</text>
+                <rect x="-20" y="15" width="40" height="10" rx="3" fill="#52796f" stroke="#2f3e46" stroke-width="0.8"/>
+                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">POZO</text>
             `;
         }
         if (type === 'laberinto') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="22">🌀</text>
-                <rect x="-28" y="16" width="56" height="13" rx="3" fill="#023e8a" stroke="#03045e" stroke-width="0.8"/>
-                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7.5" fill="#ffffff">LABERINTO</text>
+                <text x="0" y="7" text-anchor="middle" font-size="19">🌀</text>
+                <rect x="-23" y="15" width="46" height="10" rx="3" fill="#023e8a" stroke="#03045e" stroke-width="0.8"/>
+                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="6.5" fill="#ffffff">LABERINTO</text>
             `;
         }
         if (type === 'carcel') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="22">⛓️</text>
-                <rect x="-26" y="16" width="52" height="13" rx="3" fill="#4a4e69" stroke="#22223b" stroke-width="0.8"/>
-                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">CÁRCEL</text>
+                <text x="0" y="7" text-anchor="middle" font-size="19">⛓️</text>
+                <rect x="-21" y="15" width="42" height="10" rx="3" fill="#4a4e69" stroke="#22223b" stroke-width="0.8"/>
+                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">CÁRCEL</text>
             `;
         }
         if (type === 'muerte') {
             return `
-                <text x="0" y="7" text-anchor="middle" font-size="24">💀</text>
-                <rect x="-26" y="16" width="52" height="13" rx="3" fill="#c1121f" stroke="#780000" stroke-width="0.8"/>
-                <text x="0" y="25.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="8" fill="#ffffff">MUERTE</text>
+                <text x="0" y="7" text-anchor="middle" font-size="20">💀</text>
+                <rect x="-22" y="15" width="44" height="10" rx="3" fill="#c1121f" stroke="#780000" stroke-width="0.8"/>
+                <text x="0" y="22.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7" fill="#ffffff">MUERTE</text>
             `;
         }
 
@@ -492,9 +449,9 @@ class OcaGameApp {
 
         const item = motifs[num] || { icon: '⭐', label: `PASO ${num}` };
         return `
-            <circle cx="0" cy="5" r="17" fill="#ffffff" stroke="#d4af37" stroke-width="1.2" opacity="0.9"/>
-            <text x="0" y="11" text-anchor="middle" font-size="18">${item.icon}</text>
-            <text x="0" y="26" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="800" font-size="7.5" fill="#4a3525" letter-spacing="0.3">${item.label}</text>
+            <circle cx="0" cy="3" r="14" fill="#ffffff" stroke="#d4af37" stroke-width="1" opacity="0.95"/>
+            <text x="0" y="8" text-anchor="middle" font-size="16">${item.icon}</text>
+            <text x="0" y="22" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="800" font-size="6.8" fill="#4a3525" letter-spacing="0.3">${item.label}</text>
         `;
     }
 
@@ -718,11 +675,11 @@ class OcaGameApp {
         if (vW === 0 || vH === 0) return;
 
         const scaleX = vW / 1000;
-        const scaleY = vH / 820;
+        const scaleY = vH / 920;
         const baseScale = Math.min(scaleX, scaleY);
 
         const renderedSvgW = 1000 * baseScale;
-        const renderedSvgH = 820 * baseScale;
+        const renderedSvgH = 920 * baseScale;
         const svgOffsetX = (vW - renderedSvgW) / 2;
         const svgOffsetY = (vH - renderedSvgH) / 2;
 
@@ -866,11 +823,13 @@ class OcaGameApp {
 
         const path = event.path || [];
         const startPos = path.length > 0 ? path[0] : event.final_pos;
+        const isMyTurn = (event.player_id === this.myId);
 
-        // 1. ACTION CAMERA: Smoothly Zoom IN to starting token!
-        if (this.actionCameraEnabled) {
+        // 1. ACTION CAMERA: Smoothly Zoom IN ONLY when it's MY turn!
+        // When bots play, keep camera calm and steady in full view.
+        if (this.actionCameraEnabled && isMyTurn) {
             const isMobile = window.innerWidth <= 768;
-            this.camera.scale = isMobile ? 1.95 : 1.7;
+            this.camera.scale = isMobile ? 1.85 : 1.5;
             this.camera.isZoomed = true;
             this.updateCameraPillText();
             this.softGlideToTile(startPos);
@@ -891,8 +850,8 @@ class OcaGameApp {
 
                 if (window.ocaAudio) window.ocaAudio.playStep();
 
-                // Gentle midway catch-up if path is long
-                if (this.actionCameraEnabled && path.length > 5 && i === Math.floor(path.length / 2)) {
+                // Gentle midway catch-up ONLY if it's my turn
+                if (this.actionCameraEnabled && isMyTurn && path.length > 5 && i === Math.floor(path.length / 2)) {
                     this.softGlideToTile(stepPos);
                 }
 
@@ -902,7 +861,7 @@ class OcaGameApp {
 
         // 4. Focus on landed tile
         this.highlightCard(event.final_pos);
-        if (this.actionCameraEnabled || this.camera.isZoomed) {
+        if ((this.actionCameraEnabled && isMyTurn) || this.camera.isZoomed) {
             this.softGlideToTile(event.final_pos);
         }
 
@@ -946,8 +905,8 @@ class OcaGameApp {
         // 8. PAUSE to let the user admire the landed card and read the rhyme!
         await this.sleep(1350);
 
-        // 9. ACTION CAMERA: Smoothly Zoom OUT to full board overview!
-        if (this.actionCameraEnabled && !event.is_win) {
+        // 9. ACTION CAMERA: Smoothly Zoom OUT to full board overview after my turn!
+        if (this.actionCameraEnabled && isMyTurn && !event.is_win) {
             this.resetCameraToFullView();
             await this.sleep(600);
         }
