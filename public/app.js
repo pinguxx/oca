@@ -606,13 +606,6 @@ class OcaGameApp {
         this.updateCameraPillText();
         this.softGlideToTile(targetPos);
     }
-        if (me) {
-            this.camera.scale = 1.6;
-            this.camera.isZoomed = true;
-            this.updateCameraPillText();
-            this.softGlideToTile(me.position);
-        }
-    }
 
     updateRaceRadar() {
         const container = document.getElementById('radar-runners');
