@@ -848,4 +848,47 @@ mod tests {
         assert_eq!(next_timer_2, 0); // infinite
         assert!(room.check_turn_timeout().is_none());
     }
+
+    #[test]
+    fn test_max_players_limit() {
+        let mut room = GameRoom::new(
+            "MAXP".to_string(),
+            "p1".to_string(),
+            "Host".to_string(),
+            None,
+            None,
+            true,
+        );
+        for i in 2..=8 {
+            room.add_player(
+                format!("p{}", i),
+                format!("Player {}", i),
+                None,
+                None,
+                false,
+            )
+            .unwrap();
+        }
+        assert_eq!(room.players.len(), 8);
+        let res = room.add_player("p9".to_string(), "Player 9".to_string(), None, None, false);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_inn_and_prison_rules() {
+        let (t_inn, _, _, _, _, wait_inn) = BoardDefinition::tile_rule(19);
+        assert_eq!(t_inn, TileType::Posada);
+        assert_eq!(wait_inn, 1);
+
+        let (t_jail, _, _, _, _, wait_jail) = BoardDefinition::tile_rule(52);
+        assert_eq!(t_jail, TileType::Carcel);
+        assert_eq!(wait_jail, 2);
+    }
+
+    #[test]
+    fn test_well_rescue_rule() {
+        let (t_well, _, _, _, _, wait_well) = BoardDefinition::tile_rule(31);
+        assert_eq!(t_well, TileType::Pozo);
+        assert_eq!(wait_well, 3);
+    }
 }
