@@ -3,22 +3,26 @@ use serde::{Deserialize, Serialize};
 
 use crate::board::{BoardDefinition, TileType, TOTAL_TILES};
 
-pub const DEFAULT_COLORS: [&str; 6] = [
+pub const DEFAULT_COLORS: [&str; 8] = [
     "#E63946", // Rojo Caramelo
+    "#1A1A1A", // Negro Azabache
     "#457B9D", // Azul Talavera
     "#2A9D8F", // Verde Jade
     "#E76F51", // Naranja Barro
     "#9B5DE5", // Morado Bugambilia
     "#F15BB5", // Rosa Mexicano
+    "#E09F3E", // Dorado Oaxaqueño
 ];
 
-pub const DEFAULT_AVATARS: [&str; 6] = ["🪿", "🦆", "🎩", "👑", "🌵", "🌮"];
+pub const DEFAULT_AVATARS: [&str; 8] = ["🪿", "🦆", "🎩", "👑", "🌵", "🌮", "🎸", "🌶️"];
 
-pub const BOT_NAMES: [&str; 6] = [
+pub const BOT_NAMES: [&str; 8] = [
     "Don Ganso",
     "Oca Veloz",
     "Gansito",
     "Doña Plumas",
+    "El Mariachi",
+    "La Calaca",
     "Pato Lucas",
     "Oca Sabia",
 ];
@@ -156,8 +160,8 @@ impl GameRoom {
     }
 
     pub fn add_player(&mut self, id: String, name: String, color: Option<String>, avatar: Option<String>, is_bot: bool) -> Result<(), &'static str> {
-        if self.players.len() >= 6 {
-            return Err("La sala está llena (máximo 6 jugadores)");
+        if self.players.len() >= 8 {
+            return Err("La sala está llena (máximo 8 jugadores)");
         }
         if self.status != GameStatus::Waiting {
             return Err("La partida ya ha comenzado");
@@ -173,8 +177,8 @@ impl GameRoom {
     }
 
     pub fn add_bot(&mut self) -> Result<String, &'static str> {
-        if self.players.len() >= 6 {
-            return Err("La sala está llena (máximo 6 jugadores)");
+        if self.players.len() >= 8 {
+            return Err("La sala está llena (máximo 8 jugadores)");
         }
         let count = self.players.iter().filter(|p| p.is_bot).count();
         let bot_name = BOT_NAMES[count % BOT_NAMES.len()].to_string();

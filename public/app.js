@@ -705,7 +705,7 @@ class OcaGameApp {
     // Rule 2 & 6: Smooth zoom into a specific token
     zoomInToToken(tileNum, duration = 0.85) {
         const isMobile = window.innerWidth <= 768;
-        this.camera.scale = isMobile ? 1.85 : 1.5;
+        this.camera.scale = isMobile ? 1.38 : 1.5;
         this.camera.isZoomed = true;
         this.updateCameraPillText();
         this.calculateTargetCameraXY(tileNum);
