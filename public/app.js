@@ -12,6 +12,7 @@ class OcaGameApp {
         this.boardCoords = [];
         this.isHost = false;
         this.isAnimating = false;
+        this.playerPositions = {};
 
         // Customization
         this.selectedAvatar = '🪿';
@@ -82,17 +83,17 @@ class OcaGameApp {
             this.boardDef = this.generateFallbackBoard();
         }
 
-        // Map coordinates for 1000x920 SVG viewport
+        // Map coordinates for 1000x900 SVG viewport
         this.boardCoords = this.boardDef.map(tile => {
             const x = (tile.x_pct / 100.0) * 1000;
-            const y = (tile.y_pct / 100.0) * 920;
+            const y = (tile.y_pct / 100.0) * 900;
             return { x, y, tile };
         });
     }
 
     generateFallbackBoard() {
         const tiles = [];
-        tiles.push({ number: 0, tile_type: 'normal', name: 'Salida', x_pct: 31.0, y_pct: 91.5 });
+        tiles.push({ number: 0, tile_type: 'normal', name: 'Salida', x_pct: 6.5, y_pct: 92.8 });
         for (let i = 1; i <= 63; i++) {
             let t = 'normal';
             if ([5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59].includes(i)) t = 'oca';
@@ -114,6 +115,7 @@ class OcaGameApp {
         this.renderCornerRosettes();
         this.renderSalida();
         this.renderSpiralTrack();
+        this.renderCenterCourtArt();
         this.renderTilesCards();
         this.renderGranOcaGarden();
         this.renderPlayerTokens();
@@ -126,10 +128,10 @@ class OcaGameApp {
         group.innerHTML = '';
 
         const corners = [
-            { x: 55, y: 55 },
-            { x: 945, y: 55 },
-            { x: 945, y: 865 },
-            { x: 55, y: 865 }
+            { x: 50, y: 50 },
+            { x: 950, y: 50 },
+            { x: 950, y: 850 },
+            { x: 50, y: 850 }
         ];
 
         corners.forEach(({ x, y }) => {
@@ -158,16 +160,23 @@ class OcaGameApp {
         if (!group) return;
         group.innerHTML = '';
 
-        const coord = this.boardCoords[0] || { x: 310, y: 842 };
+        const coord = this.boardCoords[0] || { x: 65, y: 835 };
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.setAttribute('transform', `translate(${coord.x}, ${coord.y})`);
         g.innerHTML = `
-            <!-- Vintage Salida Base Banner -->
-            <rect x="-42" y="-24" width="84" height="48" rx="8" fill="#f8edeb" stroke="#851e1e" stroke-width="2.5" filter="url(#cardShadow)"/>
-            <rect x="-38" y="-20" width="76" height="40" rx="6" fill="none" stroke="#d4af37" stroke-width="1.5"/>
-            <text x="0" y="-3" text-anchor="middle" font-size="18">🏁</text>
-            <text x="0" y="14" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="10.5" fill="#851e1e" letter-spacing="1">SALIDA</text>
+            <!-- Vintage Salida Card Base -->
+            <rect class="svg-card-rect" id="rect-card-0" x="-34" y="-36" width="68" height="72" rx="7" fill="#f8edeb" stroke="#851e1e" stroke-width="2.5" filter="url(#cardShadow)"/>
+            <rect x="-31.5" y="-33.5" width="63" height="67" rx="5" fill="none" stroke="#d4af37" stroke-width="1.5"/>
+
+            <!-- Centered Number Badge 0 -->
+            <circle cx="-22" cy="-24" r="9.5" fill="#ffffff" stroke="#851e1e" stroke-width="1.3"/>
+            <text class="svg-card-num-text" x="-22" y="-24">0</text>
+
+            <!-- Checkered Flag and Label -->
+            <text x="0" y="5" text-anchor="middle" font-size="24">🏁</text>
+            <rect x="-26" y="16" width="52" height="13" rx="3" fill="#851e1e"/>
+            <text x="0" y="25" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="7.5" fill="#ffd166" letter-spacing="1">SALIDA</text>
         `;
         group.appendChild(g);
     }
@@ -189,19 +198,19 @@ class OcaGameApp {
         pathBase.setAttribute('d', pathD);
         pathBase.setAttribute('fill', 'none');
         pathBase.setAttribute('stroke', '#f8edeb');
-        pathBase.setAttribute('stroke-width', '54');
+        pathBase.setAttribute('stroke-width', '68');
         pathBase.setAttribute('stroke-linecap', 'round');
         pathBase.setAttribute('stroke-linejoin', 'round');
-        pathBase.setAttribute('opacity', '0.75');
+        pathBase.setAttribute('opacity', '0.6');
 
         const pathBorder = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         pathBorder.setAttribute('d', pathD);
         pathBorder.setAttribute('fill', 'none');
         pathBorder.setAttribute('stroke', '#d4af37');
-        pathBorder.setAttribute('stroke-width', '50');
+        pathBorder.setAttribute('stroke-width', '64');
         pathBorder.setAttribute('stroke-linecap', 'round');
         pathBorder.setAttribute('stroke-linejoin', 'round');
-        pathBorder.setAttribute('opacity', '0.4');
+        pathBorder.setAttribute('opacity', '0.35');
 
         const pathLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         pathLine.setAttribute('d', pathD);
@@ -209,12 +218,80 @@ class OcaGameApp {
         pathLine.setAttribute('stroke', '#851e1e');
         pathLine.setAttribute('stroke-width', '2.5');
         pathLine.setAttribute('stroke-dasharray', '8 6');
-        pathLine.setAttribute('stroke-opacity', '0.5');
+        pathLine.setAttribute('stroke-opacity', '0.45');
         pathLine.setAttribute('stroke-linecap', 'round');
 
         group.appendChild(pathBase);
         group.appendChild(pathBorder);
         group.appendChild(pathLine);
+    }
+
+    // Majestic Vintage Center Court Medallion (Center of Board)
+    renderCenterCourtArt() {
+        const group = document.getElementById('svg-center-court');
+        if (!group) return;
+        group.innerHTML = '';
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', 'translate(390, 390)');
+
+        let rays = '';
+        for (let i = 0; i < 24; i++) {
+            const ang = (i * 15) * Math.PI / 180;
+            const x1 = Math.cos(ang) * 20;
+            const y1 = Math.sin(ang) * 20;
+            const x2 = Math.cos(ang) * 95;
+            const y2 = Math.sin(ang) * 95;
+            rays += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#851e1e" stroke-width="1.8" stroke-dasharray="4 4" />`;
+        }
+
+        g.innerHTML = `
+            <!-- Vintage Card Base (240x240) -->
+            <rect x="-120" y="-120" width="240" height="240" rx="14" fill="#fffef7" stroke="#851e1e" stroke-width="3" filter="url(#cardShadow)"/>
+            <rect x="-114" y="-114" width="228" height="228" rx="10" fill="none" stroke="#d4af37" stroke-width="2"/>
+            <rect x="-110" y="-110" width="220" height="220" rx="8" fill="none" stroke="rgba(133,30,30,0.18)" stroke-width="1"/>
+
+            <!-- Radiant Sunburst Pattern -->
+            <g opacity="0.22">
+                ${rays}
+            </g>
+
+            <!-- Rosette / Compass Rose Centerpiece -->
+            <circle cx="0" cy="5" r="46" fill="#fff9db" stroke="#851e1e" stroke-width="2.5"/>
+            <circle cx="0" cy="5" r="38" fill="#2a9d8f" stroke="#d4af37" stroke-width="1.5" opacity="0.85"/>
+            <circle cx="0" cy="5" r="26" fill="#851e1e"/>
+            <circle cx="0" cy="5" r="7" fill="#ffd166"/>
+
+            <!-- 8-Pointed Star (Rosa de los Vientos) -->
+            <polygon points="0,-28 6,3 0,8 -6,3" fill="#ffffff" transform="translate(0, 5)"/>
+            <polygon points="0,38 6,12 0,5 -6,12" fill="#ffffff" transform="translate(0, 5)"/>
+            <polygon points="33,5 6,10 0,5 6,0" fill="#ffffff" transform="translate(0, 5)"/>
+            <polygon points="-33,5 -6,10 0,5 -6,0" fill="#ffffff" transform="translate(0, 5)"/>
+
+            <text x="0" y="10" text-anchor="middle" font-size="16">🪿</text>
+
+            <!-- Header Curved Ribbon: EL JUEGO DE LA OCA -->
+            <path d="M -105,-82 Q 0,-102 105,-82 L 100,-58 Q 0,-76 -100,-58 Z" fill="#ffd166" stroke="#851e1e" stroke-width="2" filter="url(#cardShadow)"/>
+            <text x="0" y="-68" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-weight="900" font-size="13" fill="#851e1e" letter-spacing="1">EL JUEGO DE LA OCA</text>
+
+            <!-- Subtitle Ribbon -->
+            <rect x="-75" y="-52" width="150" height="17" rx="8" fill="#851e1e"/>
+            <text x="0" y="-40" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="700" font-size="8.5" fill="#ffd166" letter-spacing="1">EDICIÓN TRADICIONAL</text>
+
+            <!-- Motto Banner at Bottom -->
+            <path d="M -110,82 Q 0,70 110,82 L 105,106 Q 0,94 -105,106 Z" fill="#f8edeb" stroke="#851e1e" stroke-width="1.5"/>
+            <text x="0" y="97" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-style="italic" font-weight="700" font-size="9.5" fill="#851e1e">
+                «De oca a oca y tiro porque me toca»
+            </text>
+
+            <!-- Corner Stars -->
+            <text x="-106" y="-98" font-size="12" fill="#d90429">★</text>
+            <text x="96" y="-98" font-size="12" fill="#d90429">★</text>
+            <text x="-106" y="112" font-size="12" fill="#d90429">★</text>
+            <text x="96" y="112" font-size="12" fill="#d90429">★</text>
+        `;
+
+        group.appendChild(g);
     }
 
     // Render Every Card-Tile (1 to 62)
@@ -225,8 +302,8 @@ class OcaGameApp {
 
         // Alternating Pastel Cardstock Palette (Vintage Montecarlo)
         const palette = ['#caf0f8', '#fefae0', '#d8f3dc', '#ffe5d9', '#e0fbfc', '#fff3b0'];
-        const cardW = 50;
-        const cardH = 56;
+        const cardW = 68;
+        const cardH = 72;
 
         for (let i = 1; i <= 62; i++) {
             const coord = this.boardCoords[i];
@@ -244,16 +321,16 @@ class OcaGameApp {
             const drawing = this.getCardIllustration(i, tile.tile_type);
 
             g.innerHTML = `
-                <!-- Card Container -->
-                <rect class="svg-card-rect" id="rect-card-${i}" x="${-cardW/2}" y="${-cardH/2}" width="${cardW}" height="${cardH}" rx="7" fill="${bgColor}" stroke="rgba(133,30,30,0.35)" stroke-width="1.2" filter="url(#cardShadow)"/>
-                <rect x="${-cardW/2 + 2}" y="${-cardH/2 + 2}" width="${cardW - 4}" height="${cardH - 4}" rx="5" fill="none" stroke="rgba(212,175,55,0.4)" stroke-width="0.8"/>
+                <!-- Card Container (68x72) -->
+                <rect class="svg-card-rect" id="rect-card-${i}" x="-34" y="-36" width="68" height="72" rx="7" fill="${bgColor}" stroke="rgba(133,30,30,0.35)" stroke-width="1.2" filter="url(#cardShadow)"/>
+                <rect x="-31.5" y="-33.5" width="63" height="67" rx="5" fill="none" stroke="rgba(212,175,55,0.4)" stroke-width="0.8"/>
 
-                <!-- Vintage Number Badge -->
-                <circle cx="${-cardW/2 + 10}" cy="${-cardH/2 + 10}" r="7.5" fill="#ffffff" stroke="#851e1e" stroke-width="1.2"/>
-                <text class="svg-card-num-text" x="${-cardW/2 + 10}" y="${-cardH/2 + 13}" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-weight="900" font-size="8.5" fill="#851e1e">${i}</text>
+                <!-- Vintage Number Badge (Centered perfectly) -->
+                <circle cx="-22" cy="-24" r="9.5" fill="#ffffff" stroke="#851e1e" stroke-width="1.3"/>
+                <text class="svg-card-num-text" x="-22" y="-24">${i}</text>
 
                 <!-- Corner Star Accent -->
-                <text x="${cardW/2 - 9}" y="${-cardH/2 + 11}" font-size="8.5" fill="#d90429" text-anchor="middle">★</text>
+                <text x="22" y="-22" font-size="9.5" fill="#d90429" text-anchor="middle">★</text>
 
                 <!-- Illustrated Scene -->
                 <g>
@@ -265,58 +342,42 @@ class OcaGameApp {
         }
     }
 
-    // Casilla 63: Gran Jardín de la Oca (Center of Spiral)
+    // Casilla 63: Gran Jardín de la Oca (Center Court Destination)
     renderGranOcaGarden() {
         const group = document.getElementById('svg-garden-group');
         if (!group) return;
         group.innerHTML = '';
 
-        const coord = this.boardCoords[63] || { x: 500, y: 460 };
+        const coord = this.boardCoords[63] || { x: 610, y: 390 };
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.setAttribute('id', 'tile-card-63');
         g.setAttribute('class', 'svg-tile-item tile-meta');
         g.setAttribute('transform', `translate(${coord.x}, ${coord.y})`);
 
-        let rays = '';
-        for (let i = 0; i < 20; i++) {
-            const ang = (i * 18) * Math.PI / 180;
-            const x1 = Math.cos(ang) * 44;
-            const y1 = Math.sin(ang) * 44;
-            const x2 = Math.cos(ang) * 64;
-            const y2 = Math.sin(ang) * 64;
-            rays += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#d4af37" stroke-width="2" stroke-linecap="round"/>`;
-        }
-
         g.innerHTML = `
-            <!-- Radiating Sunburst Rays -->
-            <g opacity="0.45">
-                ${rays}
+            <!-- Golden Card Base (160x240) -->
+            <rect class="svg-card-rect" id="rect-card-63" x="-80" y="-120" width="160" height="240" rx="14" fill="#fff9db" stroke="#851e1e" stroke-width="3" filter="url(#cardShadow)"/>
+            <rect x="-74" y="-114" width="148" height="228" rx="10" fill="none" stroke="#d4af37" stroke-width="2"/>
+            <rect x="-70" y="-110" width="140" height="220" rx="8" fill="none" stroke="rgba(133,30,30,0.18)" stroke-width="1"/>
+
+            <!-- Curving Ribbon: 'Juego de la Oca' -->
+            <path d="M -65,-86 Q 0,-102 65,-86 L 62,-66 Q 0,-80 -62,-66 Z" fill="#ffd166" stroke="#851e1e" stroke-width="1.8"/>
+            <text x="0" y="-74" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="12.5" fill="#851e1e">Juego de la Oca</text>
+
+            <!-- Casilla 63 Number Circle -->
+            <circle cx="0" cy="-36" r="18" fill="#d90429" stroke="#ffffff" stroke-width="2.5"/>
+            <text x="0" y="-36" text-anchor="middle" dominant-baseline="central" font-family="'Outfit', sans-serif" font-weight="900" font-size="18" fill="#ffffff">63</text>
+
+            <!-- Crowned Royal Goose -->
+            <g transform="translate(0, 22)">
+                <text x="0" y="-16" text-anchor="middle" font-size="22">👑</text>
+                <text x="0" y="22" text-anchor="middle" font-size="52">🪿</text>
             </g>
 
-            <!-- Grand Central Altar / Medallion -->
-            <circle class="svg-card-rect" id="rect-card-63" r="66" fill="#fff9db" stroke="#851e1e" stroke-width="3.5" filter="url(#cardShadow)"/>
-            <circle r="60" fill="none" stroke="#d4af37" stroke-width="2.5"/>
-            <circle r="56" fill="#fefae0" stroke="rgba(133,30,30,0.2)" stroke-width="1"/>
-            <circle r="44" fill="#2a9d8f" opacity="0.12"/>
-
-            <!-- Crowned Golden Goose -->
-            <g transform="translate(0, -6)">
-                <text x="0" y="-12" text-anchor="middle" font-size="18">👑</text>
-                <text x="0" y="18" text-anchor="middle" font-size="34">🪿</text>
-            </g>
-
-            <!-- Casilla 63 Badge -->
-            <circle cx="0" cy="-38" r="14" fill="#d90429" stroke="#ffffff" stroke-width="2"/>
-            <text x="0" y="-33.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="13" fill="#ffffff">63</text>
-
-            <!-- ¡VICTORIA! Ribbon at bottom -->
-            <rect x="-45" y="32" width="90" height="18" rx="6" fill="#851e1e" stroke="#d4af37" stroke-width="1.2"/>
-            <text x="0" y="44.5" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="10" fill="#ffd166" letter-spacing="1">¡VICTORIA!</text>
-
-            <text x="0" y="58" text-anchor="middle" font-family="'Playfair Display', serif" font-style="italic" font-weight="700" font-size="7.5" fill="#851e1e">
-                Gran Jardín de la Oca
-            </text>
+            <!-- ¡VICTORIA! Ribbon -->
+            <rect x="-56" y="82" width="112" height="24" rx="6" fill="#851e1e" stroke="#d4af37" stroke-width="1.2"/>
+            <text x="0" y="98" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="12" fill="#ffd166" letter-spacing="1">¡VICTORIA!</text>
         `;
 
         group.appendChild(g);
@@ -324,11 +385,11 @@ class OcaGameApp {
 
     // Helper: Card dimensions based on loop
     getCardWidth(num) {
-        return 50;
+        return 68;
     }
 
     getCardHeight(num) {
-        return 56;
+        return 72;
     }
 
     getTileBgColor(num, type, palette) {
@@ -462,6 +523,7 @@ class OcaGameApp {
 
         const posMap = {};
         this.room.players.forEach(p => {
+            this.playerPositions[p.id] = p.position;
             if (!posMap[p.position]) posMap[p.position] = [];
             posMap[p.position].push(p);
         });
@@ -477,7 +539,7 @@ class OcaGameApp {
 
                 if (totalOnTile > 1) {
                     const angle = (idx / totalOnTile) * Math.PI * 2;
-                    const radius = 16;
+                    const radius = 18;
                     offsetX = Math.cos(angle) * radius;
                     offsetY = Math.sin(angle) * radius;
                 }
@@ -488,8 +550,9 @@ class OcaGameApp {
                 g.setAttribute('transform', `translate(${coords.x + offsetX}, ${coords.y + offsetY})`);
 
                 g.innerHTML = `
-                    <circle class="token-circle" r="16" fill="${player.color}"/>
-                    <text class="token-avatar" y="2">${player.avatar}</text>
+                    <circle class="token-circle" r="20" fill="${player.color}"/>
+                    <circle r="17.5" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.8"/>
+                    <text class="token-avatar" y="0">${player.avatar}</text>
                 `;
                 tokensGroup.appendChild(g);
             });
@@ -669,17 +732,17 @@ class OcaGameApp {
         const viewport = document.getElementById('board-viewport');
         if (!viewport || this.boardCoords.length === 0) return;
 
-        const coords = this.boardCoords[tileNum] || this.boardCoords[1] || { x: 500, y: 410 };
+        const coords = this.boardCoords[tileNum] || this.boardCoords[1] || { x: 500, y: 450 };
         const vW = viewport.clientWidth;
         const vH = viewport.clientHeight;
         if (vW === 0 || vH === 0) return;
 
         const scaleX = vW / 1000;
-        const scaleY = vH / 920;
+        const scaleY = vH / 900;
         const baseScale = Math.min(scaleX, scaleY);
 
         const renderedSvgW = 1000 * baseScale;
-        const renderedSvgH = 920 * baseScale;
+        const renderedSvgH = 900 * baseScale;
         const svgOffsetX = (vW - renderedSvgW) / 2;
         const svgOffsetY = (vH - renderedSvgH) / 2;
 
@@ -822,17 +885,25 @@ class OcaGameApp {
         if (rollBtn) rollBtn.disabled = true;
 
         const path = event.path || [];
-        const startPos = path.length > 0 ? path[0] : event.final_pos;
         const isMyTurn = (event.player_id === this.myId);
 
-        // 1. ACTION CAMERA: Smoothly Zoom IN ONLY when it's MY turn!
-        // When bots play, keep camera calm and steady in full view.
+        // Where was the token resting before this roll?
+        let currentPos = this.playerPositions[event.player_id];
+        if (currentPos === undefined) {
+            currentPos = (path.length > 0 && path[0] > 0) ? (path[0] - 1) : 0;
+            this.playerPositions[event.player_id] = currentPos;
+        }
+
+        // Keep token locked at its real current spot before dice roll
+        this.moveTokenTo(event.player_id, currentPos);
+
+        // 1. ACTION CAMERA: Smoothly Zoom IN ONLY when it's MY turn (if not already zoomed)
         if (this.actionCameraEnabled && isMyTurn) {
             const isMobile = window.innerWidth <= 768;
             this.camera.scale = isMobile ? 1.85 : 1.5;
             this.camera.isZoomed = true;
             this.updateCameraPillText();
-            this.softGlideToTile(startPos);
+            this.softGlideToTile(currentPos);
         }
 
         // 2. Animate 3D Dice Roll
@@ -841,10 +912,11 @@ class OcaGameApp {
 
         await this.sleep(700);
 
-        // 3. Token hops step by step - clear and large in zoomed view!
+        // 3. Token hops step by step - sequentially along path!
         if (path.length > 0) {
             for (let i = 0; i < path.length; i++) {
                 const stepPos = path[i];
+                this.playerPositions[event.player_id] = stepPos;
                 this.moveTokenTo(event.player_id, stepPos);
                 this.highlightCard(stepPos);
 
@@ -860,6 +932,8 @@ class OcaGameApp {
         }
 
         // 4. Focus on landed tile
+        this.playerPositions[event.player_id] = event.final_pos;
+        this.moveTokenTo(event.player_id, event.final_pos);
         this.highlightCard(event.final_pos);
         if ((this.actionCameraEnabled && isMyTurn) || this.camera.isZoomed) {
             this.softGlideToTile(event.final_pos);
@@ -912,6 +986,7 @@ class OcaGameApp {
         }
 
         this.isAnimating = false;
+        this.renderPlayerTokens();
         this.updateTurnControls();
     }
 
@@ -1148,7 +1223,9 @@ class OcaGameApp {
         }
 
         this.updateTurnControls();
-        this.renderPlayerTokens();
+        if (!this.isAnimating) {
+            this.renderPlayerTokens();
+        }
     }
 
     updateTurnControls() {
@@ -1163,6 +1240,16 @@ class OcaGameApp {
         const currPlayer = this.room.players[this.room.current_turn];
         if (currPlayer && currPlayer.id === this.myId && !currPlayer.is_bot) {
             rollBtn.disabled = false;
+
+            // Smoothly Zoom IN on my token BEFORE I throw the dice!
+            if (this.actionCameraEnabled && !this.camera.isZoomed && !this.isAnimating) {
+                const myPos = currPlayer.position || 0;
+                const isMobile = window.innerWidth <= 768;
+                this.camera.scale = isMobile ? 1.85 : 1.5;
+                this.camera.isZoomed = true;
+                this.updateCameraPillText();
+                this.softGlideToTile(myPos);
+            }
         } else {
             rollBtn.disabled = true;
         }

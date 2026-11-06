@@ -63,10 +63,10 @@ impl BoardDefinition {
             target_tile: None,
             extra_turn: false,
             skip_turns: 0,
-            col: 3,
+            col: 0,
             row: 8,
-            x_pct: 31.0,
-            y_pct: 91.5,
+            x_pct: 6.5,
+            y_pct: 92.8,
             angle_deg: 0.0,
         });
 
@@ -99,59 +99,81 @@ impl BoardDefinition {
         }
     }
 
-    /// Generates coordinates for the authentic continuous circular / oval spiral board
+    /// Generates coordinates for the authentic Montecarlo rectangular circuit board
+    /// Concentric loops winding inward to Casilla 63 with zero tile collisions
     pub fn generate_montecarlo_coordinates() -> Vec<(u8, u8, f32, f32, f32)> {
-        const CX: f32 = 500.0;
-        const CY: f32 = 460.0;
-        const THETA_START: f32 = 105.0 * std::f32::consts::PI / 180.0;
-        const TOTAL_ROT: f32 = 2.85 * 2.0 * std::f32::consts::PI;
-        const R_START: f32 = 420.0;
-        const R_END: f32 = 120.0;
-        const N_SAMPLES: usize = 2000;
+        vec![
+            // Ring 1 (Outer perimeter, bottom -> right -> top -> left)
+            (1, 8, 17.4, 92.8, 0.0), // 1
+            (2, 8, 26.7, 92.8, 0.0), // 2
+            (3, 8, 36.0, 92.8, 0.0), // 3
+            (4, 8, 45.3, 92.8, 0.0), // 4
+            (5, 8, 54.7, 92.8, 0.0), // 5 (Oca)
+            (6, 8, 64.0, 92.8, 0.0), // 6 (Puente)
+            (7, 8, 73.3, 92.8, 0.0), // 7
+            (8, 8, 82.6, 92.8, 0.0), // 8
+            (9, 8, 93.5, 92.8, 0.0), // 9 (Oca - BR Corner)
+            (9, 7, 93.5, 83.3, 0.0), // 10
+            (9, 6, 93.5, 73.8, 0.0), // 11
+            (9, 5, 93.5, 64.3, 0.0), // 12 (Puente)
+            (9, 4, 93.5, 54.8, 0.0), // 13
+            (9, 4, 93.5, 45.2, 0.0), // 14 (Oca)
+            (9, 3, 93.5, 35.7, 0.0), // 15
+            (9, 2, 93.5, 26.2, 0.0), // 16
+            (9, 1, 93.5, 16.7, 0.0), // 17
+            (9, 0, 93.5, 7.2, 0.0),  // 18 (Oca - TR Corner)
+            (8, 0, 82.6, 7.2, 0.0),  // 19 (Posada)
+            (7, 0, 73.3, 7.2, 0.0),  // 20
+            (6, 0, 64.0, 7.2, 0.0),  // 21
+            (5, 0, 54.7, 7.2, 0.0),  // 22
+            (4, 0, 45.3, 7.2, 0.0),  // 23 (Oca)
+            (3, 0, 36.0, 7.2, 0.0),  // 24
+            (2, 0, 26.7, 7.2, 0.0),  // 25
+            (1, 0, 17.4, 7.2, 0.0),  // 26 (Dados)
+            (0, 0, 6.5, 7.2, 0.0),   // 27 (Oca - TL Corner)
+            (0, 1, 6.5, 16.7, 0.0),  // 28
+            (0, 2, 6.5, 26.2, 0.0),  // 29
+            (0, 3, 6.5, 35.7, 0.0),  // 30
+            (0, 4, 6.5, 45.2, 0.0),  // 31 (Pozo)
+            (0, 4, 6.5, 54.8, 0.0),  // 32 (Oca)
+            (0, 5, 6.5, 64.3, 0.0),  // 33
+            (0, 6, 6.5, 73.8, 0.0),  // 34
+            (0, 7, 6.5, 83.3, 0.0),  // 35
 
-        let to_xpct = |x: f32| ((x / 1000.0) * 100.0 * 10.0).round() / 10.0;
-        let to_ypct = |y: f32| ((y / 920.0) * 100.0 * 10.0).round() / 10.0;
+            // Ring 2 (Middle loop, bottom -> right -> top -> left)
+            (1, 7, 19.5, 79.4, 0.0), // 36 (Oca)
+            (2, 7, 29.5, 79.4, 0.0), // 37
+            (3, 7, 37.7, 79.4, 0.0), // 38
+            (4, 7, 45.9, 79.4, 0.0), // 39
+            (5, 7, 54.1, 79.4, 0.0), // 40
+            (6, 7, 62.3, 79.4, 0.0), // 41 (Oca)
+            (7, 7, 70.5, 79.4, 0.0), // 42 (Laberinto)
+            (8, 7, 80.5, 79.4, 0.0), // 43
+            (8, 6, 80.5, 68.9, 0.0), // 44
+            (8, 5, 80.5, 59.4, 0.0), // 45 (Oca)
+            (8, 4, 80.5, 50.0, 0.0), // 46
+            (8, 3, 80.5, 40.6, 0.0), // 47
+            (8, 2, 80.5, 31.1, 0.0), // 48
+            (8, 1, 80.5, 20.6, 0.0), // 49
+            (7, 1, 70.5, 20.6, 0.0), // 50 (Oca)
+            (6, 1, 62.3, 20.6, 0.0), // 51
+            (5, 1, 54.1, 20.6, 0.0), // 52 (Cárcel)
+            (4, 1, 45.9, 20.6, 0.0), // 53 (Dados)
+            (3, 1, 37.7, 20.6, 0.0), // 54 (Oca)
+            (1, 1, 19.5, 20.6, 0.0), // 55
+            (1, 3, 19.5, 35.3, 0.0), // 56
+            (1, 4, 19.5, 50.0, 0.0), // 57
+            (1, 5, 19.5, 64.7, 0.0), // 58 (Muerte)
 
-        let mut samples = Vec::with_capacity(N_SAMPLES + 1);
-        let mut total_length = 0.0f32;
+            // Ring 3 (Inner approach to center court)
+            (3, 5, 32.5, 66.1, 0.0), // 59 (Oca)
+            (4, 5, 44.0, 66.1, 0.0), // 60
+            (5, 5, 55.5, 66.1, 0.0), // 61
+            (6, 5, 67.0, 66.1, 0.0), // 62
 
-        for s in 0..=N_SAMPLES {
-            let u = s as f32 / N_SAMPLES as f32;
-            let theta = THETA_START + u * TOTAL_ROT;
-            let rx = R_START + (R_END - R_START) * u;
-            let ry = rx * (380.0 / 420.0);
-            let x = CX + rx * theta.cos();
-            let y = CY + ry * theta.sin();
-
-            if s > 0 {
-                let (px, py, _): (f32, f32, f32) = samples[s - 1];
-                let d = ((x - px).powi(2) + (y - py).powi(2)).sqrt();
-                total_length += d;
-            }
-            samples.push((x, y, total_length));
-        }
-
-        let mut list = Vec::with_capacity(TOTAL_TILES as usize);
-        let step_dist = total_length / 62.0;
-
-        for i in 1..=62 {
-            let target_dist = (i - 1) as f32 * step_dist;
-            let mut best = samples[0];
-            for sample in &samples {
-                if sample.2 >= target_dist {
-                    best = *sample;
-                    break;
-                }
-            }
-            let col = (best.0 / 100.0) as u8;
-            let row = (best.1 / 100.0) as u8;
-            list.push((col, row, to_xpct(best.0), to_ypct(best.1), 0.0));
-        }
-
-        // Casilla 63: Center of the spiral
-        list.push((5, 5, to_xpct(CX), to_ypct(CY), 0.0));
-
-        list
+            // Casilla 63: Gran Jardín de la Oca (Meta)
+            (6, 3, 61.0, 43.3, 0.0), // 63
+        ]
     }
 
     /// Returns rules for a tile: (TileType, Name, Rhyme, TargetTile, ExtraTurn, SkipTurns)
