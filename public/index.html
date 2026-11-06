@@ -194,18 +194,15 @@
 
           <!-- The Spiral Board Viewport & Camera -->
           <div class="board-wrapper" id="board-wrapper">
-            <!-- Floating Camera Controls -->
+            <!-- Compact Floating Camera Controls (Positioned bottom-right so they never cover tiles) -->
             <div class="board-camera-controls">
-              <button id="btn-camera-toggle" class="btn-cam-pill" title="Alternar entre Vista Completa y Zoom">
-                <span class="cam-icon">🔍</span> <span id="cam-mode-text">Vista Completa</span>
+              <button id="btn-camera-toggle" class="btn-cam-pill" title="Alternar entre Vista Zoom y Completa">
+                <span class="cam-icon">🔍</span> <span id="cam-mode-text">Zoom</span>
               </button>
-              <button id="btn-camera-center-me" class="btn-cam-pill" title="Centrar cámara en mi ficha">
-                <span>📍 Mi Ficha</span>
-              </button>
+              <button id="btn-camera-center-me" class="btn-cam-mini" title="Centrar en mi ficha">📍</button>
               <div class="zoom-stepper">
                 <button id="btn-zoom-in" class="btn-cam-mini" title="Acercar">+</button>
                 <button id="btn-zoom-out" class="btn-cam-mini" title="Alejar">−</button>
-                <button id="btn-zoom-reset" class="btn-cam-mini" title="Restablecer vista">↺</button>
               </div>
             </div>
 
@@ -226,11 +223,6 @@
                       <stop offset="100%" stop-color="#fb8500"/>
                     </linearGradient>
 
-                    <linearGradient id="indicacionesGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stop-color="#fffbf0"/>
-                      <stop offset="100%" stop-color="#fef3d6"/>
-                    </linearGradient>
-
                     <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
                       <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.2"/>
                     </filter>
@@ -249,9 +241,6 @@
                   <!-- Tiles (1..=62) matching Montecarlo cards -->
                   <g id="svg-tiles-group"></g>
 
-                  <!-- Center "INDICACIONES" Vintage Rules Card -->
-                  <g id="svg-indicaciones-group"></g>
-
                   <!-- Central Tile 63 (Gran Oca & Banner) -->
                   <g id="svg-garden-group"></g>
 
@@ -266,16 +255,31 @@
         <!-- Sidebar / Controls Column -->
         <div class="sidebar-column">
 
-          <!-- Dice & Action Card -->
+          <!-- Dice & Action Card with Real 3D Cubes -->
           <div class="action-card">
             <h3 class="card-title">Tirada de Dados</h3>
             
             <div class="dice-arena">
-              <div class="die" id="die-1" data-value="1">
-                <span class="pip pip-center"></span>
-              </div>
-              <div class="die" id="die-2" data-value="1">
-                <span class="pip pip-center"></span>
+              <div class="dice-stage" id="dice-container-box" title="Haz clic en los dados o botón para tirar">
+                <!-- 3D Cube Die 1 -->
+                <div id="cube-die-1" class="cube-die">
+                  <div class="cube-face face-1"><span class="pip pip-ace"></span></div>
+                  <div class="cube-face face-2"><span class="pip"></span><span class="pip"></span></div>
+                  <div class="cube-face face-3"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+                  <div class="cube-face face-4"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+                  <div class="cube-face face-5"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+                  <div class="cube-face face-6"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+                </div>
+
+                <!-- 3D Cube Die 2 -->
+                <div id="cube-die-2" class="cube-die">
+                  <div class="cube-face face-1"><span class="pip pip-ace"></span></div>
+                  <div class="cube-face face-2"><span class="pip"></span><span class="pip"></span></div>
+                  <div class="cube-face face-3"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+                  <div class="cube-face face-4"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+                  <div class="cube-face face-5"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+                  <div class="cube-face face-6"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+                </div>
               </div>
             </div>
 

@@ -17,12 +17,13 @@ class OcaGameApp {
         this.selectedAvatar = '🪿';
         this.selectedColor = '#e63946';
 
-        // Camera & Pan/Zoom (Cámara Fija por defecto para evitar mareos)
+        // Camera & Pan/Zoom (Mobile starts with active zoom so tiles are large & crisp)
+        const isMobile = window.innerWidth <= 768;
         this.camera = {
             x: 0,
             y: 0,
-            scale: 1.0,
-            isZoomed: false, // Default: FALSE (Vista fija completa)
+            scale: isMobile ? 1.85 : 1.0,
+            isZoomed: isMobile,
             isDragging: false,
             startX: 0,
             startY: 0,
@@ -110,7 +111,6 @@ class OcaGameApp {
 
     renderMontecarloBoard() {
         this.renderCornerRosettes();
-        this.renderIndicacionesCard();
         this.renderTilesCards();
         this.renderGranOcaGarden();
         this.renderPlayerTokens();
@@ -147,69 +147,6 @@ class OcaGameApp {
             `;
             group.appendChild(g);
         });
-    }
-
-    // Central "INDICACIONES" Card (Classic Rules Scroll)
-    renderIndicacionesCard() {
-        const group = document.getElementById('svg-indicaciones-group');
-        if (!group) return;
-        group.innerHTML = '';
-
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('transform', 'translate(435, 172)');
-
-        g.innerHTML = `
-            <!-- Vintage Card Background -->
-            <rect x="0" y="0" width="230" height="475" rx="6" fill="url(#indicacionesGrad)" stroke="#1a1a1a" stroke-width="2" filter="url(#cardShadow)"/>
-            <rect x="5" y="5" width="220" height="465" rx="4" fill="none" stroke="#851e1e" stroke-width="1.5"/>
-
-            <!-- Decorative Header Stars -->
-            <text x="18" y="32" font-size="14" fill="#d90429">★</text>
-            <text x="115" y="34" class="svg-indicaciones-title">INDICACIONES</text>
-            <text x="212" y="32" font-size="14" fill="#d90429">★</text>
-
-            <line x1="20" y1="44" x2="210" y2="44" stroke="#851e1e" stroke-width="1.5"/>
-
-            <!-- Classic Rules Text from Montecarlo Board -->
-            <g transform="translate(14, 60)" font-family="'Outfit', sans-serif" font-size="8.8" fill="#2b2b2b">
-                <text y="0" font-weight="bold" fill="#851e1e">TIRO INICIAL DEL 9:</text>
-                <text y="13">Si salen 5 y 4, vuela a la No. 53.</text>
-                <text y="25">Si salen 6 y 3, vuela a la No. 26.</text>
-                
-                <text y="48" font-weight="bold" fill="#2a9d8f">🦆 LAS OCAS:</text>
-                <text y="61">De oca a oca y tiro porque me toca.</text>
-                <text y="73">Avanza a la siguiente y repite tiro.</text>
-
-                <text y="96" font-weight="bold" fill="#457b9d">🌉 EL PUENTE (6 y 12):</text>
-                <text y="109">De puente a puente y tiro porque me</text>
-                <text y="121">lleva la corriente. Salta y repite.</text>
-
-                <text y="144" font-weight="bold" fill="#e76f51">🏨 LA POSADA (No. 19):</text>
-                <text y="157">Cansado del viaje, descansa y</text>
-                <text y="169">pierde 1 turno sin jugar.</text>
-
-                <text y="192" font-weight="bold" fill="#52796f">🕳️ EL POZO (No. 31):</text>
-                <text y="205">Atrapado en el pozo hasta que otro</text>
-                <text y="217">jugador caiga y lo rescate.</text>
-
-                <text y="240" font-weight="bold" fill="#0077b6">🌀 EL LABERINTO (No. 42):</text>
-                <text y="253">Del laberinto al 30. Retrocede 12</text>
-                <text y="265">casillas desorientado.</text>
-
-                <text y="288" font-weight="bold" fill="#4a4e69">⛓️ LA CÁRCEL (No. 52):</text>
-                <text y="301">Detenido por la ley, pierde 2 turnos</text>
-                <text y="313">enteros de condena.</text>
-
-                <text y="336" font-weight="bold" fill="#c1121f">💀 LA MUERTE (No. 58):</text>
-                <text y="349">¡El peor castigo! Vuelve al principio</text>
-                <text y="361">a la casilla No. 1 a comenzar.</text>
-
-                <text y="384" font-weight="bold" fill="#d90429">🏆 LA GRAN OCA (No. 63):</text>
-                <text y="397">Para ganar debe entrar con número</text>
-                <text y="409">exacto; si sobran puntos, rebota.</text>
-            </g>
-        `;
-        group.appendChild(g);
     }
 
     // Render Every Card-Tile (1 to 62)
@@ -542,34 +479,43 @@ class OcaGameApp {
             }
         }, { passive: true });
 
-        // Buttons
-        document.getElementById('btn-camera-toggle').addEventListener('click', () => {
-            this.toggleCameraZoom();
-        });
+        // Camera Buttons
+        const btnToggle = document.getElementById('btn-camera-toggle');
+        if (btnToggle) {
+            btnToggle.addEventListener('click', () => this.toggleCameraZoom());
+        }
 
-        document.getElementById('btn-camera-center-me').addEventListener('click', () => {
-            this.centerOnMyToken();
-        });
+        const btnCenterMe = document.getElementById('btn-camera-center-me');
+        if (btnCenterMe) {
+            btnCenterMe.addEventListener('click', () => this.centerOnMyToken());
+        }
 
-        document.getElementById('btn-zoom-in').addEventListener('click', () => {
-            this.camera.scale = Math.min(this.camera.scale + 0.3, 2.5);
-            this.camera.isZoomed = true;
-            this.updateCameraPillText();
-            this.applyCameraTransform(true);
-        });
-
-        document.getElementById('btn-zoom-out').addEventListener('click', () => {
-            this.camera.scale = Math.max(this.camera.scale - 0.3, 1.0);
-            if (this.camera.scale <= 1.05) {
-                this.resetCameraToFullView();
-            } else {
+        const btnZoomIn = document.getElementById('btn-zoom-in');
+        if (btnZoomIn) {
+            btnZoomIn.addEventListener('click', () => {
+                this.camera.scale = Math.min(this.camera.scale + 0.3, 2.6);
+                this.camera.isZoomed = true;
+                this.updateCameraPillText();
                 this.applyCameraTransform(true);
-            }
-        });
+            });
+        }
 
-        document.getElementById('btn-zoom-reset').addEventListener('click', () => {
-            this.resetCameraToFullView();
-        });
+        const btnZoomOut = document.getElementById('btn-zoom-out');
+        if (btnZoomOut) {
+            btnZoomOut.addEventListener('click', () => {
+                this.camera.scale = Math.max(this.camera.scale - 0.3, 1.0);
+                if (this.camera.scale <= 1.05) {
+                    this.resetCameraToFullView();
+                } else {
+                    this.applyCameraTransform(true);
+                }
+            });
+        }
+
+        const btnZoomReset = document.getElementById('btn-zoom-reset');
+        if (btnZoomReset) {
+            btnZoomReset.addEventListener('click', () => this.resetCameraToFullView());
+        }
     }
 
     applyCameraTransform(smooth = false) {
@@ -590,6 +536,8 @@ class OcaGameApp {
         this.updateCameraPillText();
 
         if (this.camera.isZoomed) {
+            const isMobile = window.innerWidth <= 768;
+            this.camera.scale = isMobile ? 1.85 : 1.6;
             this.centerOnMyToken();
         } else {
             this.resetCameraToFullView();
@@ -603,10 +551,10 @@ class OcaGameApp {
 
         if (this.camera.isZoomed) {
             pill.classList.add('active');
-            text.textContent = 'Zoom Activo';
+            text.textContent = 'Zoom';
         } else {
             pill.classList.remove('active');
-            text.textContent = 'Vista Fija (Estable)';
+            text.textContent = 'Completo';
         }
     }
 
@@ -619,28 +567,45 @@ class OcaGameApp {
         this.applyCameraTransform(true);
     }
 
-    // Soft single-glide only when needed
+    // Soft single-glide only after moves, avoiding jitter or dizziness
     softGlideToTile(tileNum) {
-        if (!this.camera.isZoomed) return; // Keep fixed if in full view!
+        if (!this.camera.isZoomed) return;
 
         const viewport = document.getElementById('board-viewport');
         if (!viewport || this.boardCoords.length === 0) return;
 
-        const coords = this.boardCoords[tileNum] || this.boardCoords[0];
-        const vWidth = viewport.clientWidth;
-        const vHeight = viewport.clientHeight;
+        const coords = this.boardCoords[tileNum] || this.boardCoords[1] || { x: 500, y: 410 };
+        const vW = viewport.clientWidth;
+        const vH = viewport.clientHeight;
+        if (vW === 0 || vH === 0) return;
 
-        const targetX = (vWidth / 2) - (coords.x * (vWidth / 1000)) * this.camera.scale;
-        const targetY = (vHeight / 2) - (coords.y * (vHeight / 820)) * this.camera.scale;
+        const scaleX = vW / 1000;
+        const scaleY = vH / 820;
+        const baseScale = Math.min(scaleX, scaleY);
 
-        this.camera.x = targetX;
-        this.camera.y = targetY;
+        const renderedSvgW = 1000 * baseScale;
+        const renderedSvgH = 820 * baseScale;
+        const svgOffsetX = (vW - renderedSvgW) / 2;
+        const svgOffsetY = (vH - renderedSvgH) / 2;
+
+        const tileX = svgOffsetX + (coords.x * baseScale);
+        const tileY = svgOffsetY + (coords.y * baseScale);
+
+        this.camera.x = (vW / 2) - (tileX * this.camera.scale);
+        this.camera.y = (vH / 2) - (tileY * this.camera.scale);
         this.applyCameraTransform(true);
     }
 
     centerOnMyToken() {
         if (!this.room || !this.myId) return;
         const me = this.room.players.find(p => p.id === this.myId);
+        const targetPos = me ? me.position : 1;
+        const isMobile = window.innerWidth <= 768;
+        this.camera.scale = isMobile ? 1.85 : 1.6;
+        this.camera.isZoomed = true;
+        this.updateCameraPillText();
+        this.softGlideToTile(targetPos);
+    }
         if (me) {
             this.camera.scale = 1.6;
             this.camera.isZoomed = true;
@@ -843,30 +808,43 @@ class OcaGameApp {
     }
 
     animateDiceRoll(dice, total) {
-        const d1 = document.getElementById('die-1');
-        const d2 = document.getElementById('die-2');
+        const c1 = document.getElementById('cube-die-1');
+        const c2 = document.getElementById('cube-die-2');
         const totalDisplay = document.getElementById('dice-total-num');
 
-        if (!d1 || !d2) return;
-
-        d1.classList.add('rolling');
-        d2.classList.add('rolling');
+        if (c1) c1.classList.add('rolling');
+        if (c2 && dice.length > 1 && dice[1] > 0) {
+            c2.style.display = 'block';
+            c2.classList.add('rolling');
+        } else if (c2 && (dice.length <= 1 || dice[1] === 0)) {
+            c2.style.display = 'none';
+        }
 
         setTimeout(() => {
-            d1.classList.remove('rolling');
-            d2.classList.remove('rolling');
-
-            d1.setAttribute('data-value', dice[0] || 1);
-            d2.setAttribute('data-value', dice[1] || 1);
-
-            if (dice[1] === 0) {
-                d2.style.display = 'none';
-            } else {
-                d2.style.display = 'grid';
+            if (c1) {
+                c1.classList.remove('rolling');
+                this.setDiceRotation(c1, dice[0] || 1);
             }
-
-            totalDisplay.textContent = total;
+            if (c2 && dice.length > 1 && dice[1] > 0) {
+                c2.classList.remove('rolling');
+                this.setDiceRotation(c2, dice[1] || 1);
+            }
+            if (totalDisplay) {
+                totalDisplay.textContent = total;
+            }
         }, 550);
+    }
+
+    setDiceRotation(cubeEl, value) {
+        const rotations = {
+            1: "rotateX(0deg) rotateY(0deg)",
+            2: "rotateX(0deg) rotateY(180deg)",
+            3: "rotateX(0deg) rotateY(90deg)",
+            4: "rotateX(0deg) rotateY(-90deg)",
+            5: "rotateX(-90deg) rotateY(0deg)",
+            6: "rotateX(90deg) rotateY(0deg)"
+        };
+        cubeEl.style.transform = rotations[value] || rotations[1];
     }
 
     moveTokenTo(playerId, tileNum) {
@@ -994,7 +972,18 @@ class OcaGameApp {
         this.switchView('game-view');
         this.renderPlayerTokens();
         this.updateRoomStateUI();
-        this.resetCameraToFullView();
+
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            this.camera.scale = 1.85;
+            this.camera.isZoomed = true;
+            this.updateCameraPillText();
+            setTimeout(() => {
+                this.centerOnMyToken();
+            }, 100);
+        } else {
+            this.resetCameraToFullView();
+        }
     }
 
     updateRoomStateUI() {
@@ -1201,6 +1190,16 @@ class OcaGameApp {
         document.getElementById('btn-roll-dice').addEventListener('click', () => {
             this.send({ action: 'roll_dice' });
         });
+
+        const diceStage = document.getElementById('dice-container-box');
+        if (diceStage) {
+            diceStage.addEventListener('click', () => {
+                const rollBtn = document.getElementById('btn-roll-dice');
+                if (rollBtn && !rollBtn.disabled) {
+                    rollBtn.click();
+                }
+            });
+        }
 
         document.getElementById('btn-copy-code').addEventListener('click', () => {
             if (!this.room) return;
