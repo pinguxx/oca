@@ -183,54 +183,91 @@
             <div class="turn-status-badge" id="turn-status-badge">Esperando tiro...</div>
           </div>
 
-          <!-- The Spiral Board Viewport -->
-          <div class="board-wrapper">
-            <svg id="oca-board" class="oca-board-svg" viewBox="0 0 1000 890" preserveAspectRatio="xMidYMid meet">
-              <defs>
-                <!-- Gradients and Patterns -->
-                <linearGradient id="gardenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#ffd166"/>
-                  <stop offset="50%" stop-color="#ffb703"/>
-                  <stop offset="100%" stop-color="#fb8500"/>
-                </linearGradient>
+          <!-- Mini Race Radar (Standings Bar) -->
+          <div class="race-radar-bar" id="race-radar-bar" title="Progreso de la carrera hacia la casilla 63">
+            <span class="radar-label">🏁 Salida</span>
+            <div class="radar-track" id="radar-track">
+              <div id="radar-runners" class="radar-runners"></div>
+            </div>
+            <span class="radar-label">Meta 63 🏆</span>
+          </div>
 
-                <linearGradient id="tileGradNormal" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#ffffff"/>
-                  <stop offset="100%" stop-color="#f4f1de"/>
-                </linearGradient>
+          <!-- The Spiral Board Viewport & Camera -->
+          <div class="board-wrapper" id="board-wrapper">
+            <!-- Floating Camera Controls -->
+            <div class="board-camera-controls">
+              <button id="btn-camera-toggle" class="btn-cam-pill" title="Alternar entre Vista Completa y Zoom">
+                <span class="cam-icon">🔍</span> <span id="cam-mode-text">Vista Completa</span>
+              </button>
+              <button id="btn-camera-center-me" class="btn-cam-pill" title="Centrar cámara en mi ficha">
+                <span>📍 Mi Ficha</span>
+              </button>
+              <div class="zoom-stepper">
+                <button id="btn-zoom-in" class="btn-cam-mini" title="Acercar">+</button>
+                <button id="btn-zoom-out" class="btn-cam-mini" title="Alejar">−</button>
+                <button id="btn-zoom-reset" class="btn-cam-mini" title="Restablecer vista">↺</button>
+              </div>
+            </div>
 
-                <linearGradient id="tileGradOca" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#2a9d8f"/>
-                  <stop offset="100%" stop-color="#1f7a6f"/>
-                </linearGradient>
+            <div class="board-viewport" id="board-viewport">
+              <div class="board-camera" id="board-camera">
+                <svg id="oca-board" class="oca-board-svg" viewBox="0 0 1000 890" preserveAspectRatio="xMidYMid meet">
+                  <defs>
+                    <!-- Background Parchment Filters & Gradients -->
+                    <radialGradient id="parchmentBgGrad" cx="50%" cy="50%" r="70%">
+                      <stop offset="0%" stop-color="#fff9ea"/>
+                      <stop offset="65%" stop-color="#f5e8c8"/>
+                      <stop offset="100%" stop-color="#dfcaa0"/>
+                    </radialGradient>
 
-                <linearGradient id="tileGradPuente" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#457b9d"/>
-                  <stop offset="100%" stop-color="#1d3557"/>
-                </linearGradient>
+                    <linearGradient id="gardenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#ffe680"/>
+                      <stop offset="40%" stop-color="#ffb703"/>
+                      <stop offset="100%" stop-color="#fb8500"/>
+                    </linearGradient>
 
-                <linearGradient id="tileGradDanger" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#e63946"/>
-                  <stop offset="100%" stop-color="#9b1d20"/>
-                </linearGradient>
+                    <linearGradient id="trackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#ead8b1"/>
+                      <stop offset="50%" stop-color="#d4b982"/>
+                      <stop offset="100%" stop-color="#ead8b1"/>
+                    </linearGradient>
 
-                <filter id="tileShadow" x="-10%" y="-10%" width="125%" height="125%">
-                  <feDropShadow dx="1" dy="3" stdDeviation="2" flood-color="#000000" flood-opacity="0.25"/>
-                </filter>
-              </defs>
+                    <filter id="tileDropShadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="1" dy="4" stdDeviation="3" flood-color="#3d2b1f" flood-opacity="0.3"/>
+                    </filter>
 
-              <!-- Track background connecting line -->
-              <path id="board-spiral-path" class="board-spiral-path" d="" fill="none"/>
+                    <filter id="medallionGlow" x="-30%" y="-30%" width="160%" height="160%">
+                      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#ffb703" flood-opacity="0.6"/>
+                    </filter>
+                  </defs>
 
-              <!-- Tiles container rendered by JS -->
-              <g id="svg-tiles-group"></g>
+                  <!-- Board Parchment Background -->
+                  <rect width="1000" height="890" rx="30" fill="url(#parchmentBgGrad)"/>
 
-              <!-- Central Garden Decor -->
-              <g id="svg-garden-group"></g>
+                  <!-- Decorative Antique Compass Rose / Filigree Background -->
+                  <g id="svg-bg-decor" class="svg-bg-decor" opacity="0.38"></g>
 
-              <!-- Player Tokens container rendered by JS -->
-              <g id="svg-tokens-group"></g>
-            </svg>
+                  <!-- Track background connecting line -->
+                  <path id="board-spiral-path" class="board-spiral-path" d="" fill="none"/>
+
+                  <!-- Outer Track Boundary Rails -->
+                  <path id="board-rail-outer" class="board-rail-outer" d="" fill="none"/>
+                  <path id="board-rail-inner" class="board-rail-inner" d="" fill="none"/>
+
+                  <!-- Tiles container rendered by JS -->
+                  <g id="svg-tiles-group"></g>
+
+                  <!-- Special Illustrative Vignettes overlay -->
+                  <g id="svg-vignettes-group"></g>
+
+                  <!-- Central Garden Medallion Decor -->
+                  <g id="svg-garden-group"></g>
+
+                  <!-- Player Tokens container rendered by JS -->
+                  <g id="svg-tokens-group"></g>
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
 

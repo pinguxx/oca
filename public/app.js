@@ -1,6 +1,6 @@
 // ========================================================
 // 🦆 EL JUEGO DE LA OCA - CLIENTE INTERACTIVO
-// Motor del tablero espiral, WebSockets y animaciones
+// Tablero Espiral Caracol, Cámara Dinámica (Zoom) y WebSockets
 // ========================================================
 
 class OcaGameApp {
@@ -17,6 +17,22 @@ class OcaGameApp {
         this.selectedAvatar = '🪿';
         this.selectedColor = '#e63946';
 
+        // Camera & Pan/Zoom
+        this.camera = {
+            x: 0,
+            y: 0,
+            scale: 1.0,
+            isZoomed: false,
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            camStartX: 0,
+            camStartY: 0,
+            pinchDist: 0,
+            pinchScale: 1.0,
+            targetTile: 0,
+        };
+
         // Audio
         this.soundEnabled = true;
 
@@ -31,6 +47,7 @@ class OcaGameApp {
 
     async init() {
         this.setupEventListeners();
+        this.setupCameraGestures();
         this.setupConfetti();
         await this.loadBoardData();
         this.renderBoardSVG();
@@ -47,7 +64,7 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 1. BOARD DATA & SVG RENDERING
+    // 1. BOARD DATA & SVG RENDERING (NAUTILUS SPIRAL)
     // ========================================================
     async loadBoardData() {
         try {
@@ -60,7 +77,6 @@ class OcaGameApp {
             console.warn('Usando definición de tablero por defecto');
         }
 
-        // If fetch fails or empty, generate fallback board
         if (!this.boardDef) {
             this.boardDef = this.generateFallbackBoard();
         }
@@ -69,22 +85,22 @@ class OcaGameApp {
         this.boardCoords = this.boardDef.map(tile => {
             const x = (tile.x_pct / 100.0) * 1000;
             const y = (tile.y_pct / 100.0) * 890;
-            return { x, y, tile };
+            const angle = tile.angle_deg || 0;
+            return { x, y, angle, tile };
         });
     }
 
     generateFallbackBoard() {
         const tiles = [];
-        // Tile 0
         tiles.push({
             number: 0,
             tile_type: 'normal',
             name: 'Salida',
-            x_pct: 3.5,
-            y_pct: 94.0
+            x_pct: 6.5,
+            y_pct: 58.4,
+            angle_deg: 275
         });
 
-        // 1..=63
         for (let i = 1; i <= 63; i++) {
             let t = 'normal';
             if ([5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59].includes(i)) t = 'oca';
@@ -97,125 +113,197 @@ class OcaGameApp {
             else if (i === 58) t = 'muerte';
             else if (i === 63) t = 'meta';
 
-            // Approximate percentage for spiral
             tiles.push({
                 number: i,
                 tile_type: t,
                 name: `Casilla ${i}`,
                 x_pct: 50,
-                y_pct: 50
+                y_pct: 50,
+                angle_deg: 0
             });
         }
         return tiles;
     }
 
     renderBoardSVG() {
+        const bgDecor = document.getElementById('svg-bg-decor');
         const tilesGroup = document.getElementById('svg-tiles-group');
+        const vignettesGroup = document.getElementById('svg-vignettes-group');
         const gardenGroup = document.getElementById('svg-garden-group');
         const spiralPath = document.getElementById('board-spiral-path');
+        const railOuter = document.getElementById('board-rail-outer');
+        const railInner = document.getElementById('board-rail-inner');
 
         if (!tilesGroup || this.boardCoords.length === 0) return;
 
         tilesGroup.innerHTML = '';
+        vignettesGroup.innerHTML = '';
         gardenGroup.innerHTML = '';
+        bgDecor.innerHTML = '';
 
-        // Generate spiral connecting background track
-        let pathD = `M ${this.boardCoords[0].x} ${this.boardCoords[0].y}`;
-        for (let i = 1; i < this.boardCoords.length; i++) {
+        // 1. Antique Parchment Compass Rose & Corner Flourishes
+        bgDecor.innerHTML = `
+            <!-- Vintage Nautical Compass Rose -->
+            <g transform="translate(500, 445)">
+                <circle r="360" fill="none" stroke="#8d5b28" stroke-width="1.5" stroke-dasharray="3,3"/>
+                <circle r="260" fill="none" stroke="#8d5b28" stroke-width="1" stroke-dasharray="2,4"/>
+                <circle r="160" fill="none" stroke="#8d5b28" stroke-width="0.8"/>
+                
+                <!-- Compass Points -->
+                <polygon points="0,-360 12,-160 0,-180 -12,-160" fill="#a0522d"/>
+                <polygon points="0,360 12,160 0,180 -12,160" fill="#a0522d"/>
+                <polygon points="360,0 160,12 180,0 160,-12" fill="#a0522d"/>
+                <polygon points="-360,0 -160,12 -180,0 -160,-12" fill="#a0522d"/>
+
+                <text y="-370" text-anchor="middle" font-family="'Playfair Display', serif" font-size="20" font-weight="bold" fill="#7f4f24">N</text>
+                <text y="390" text-anchor="middle" font-family="'Playfair Display', serif" font-size="20" font-weight="bold" fill="#7f4f24">S</text>
+                <text x="385" y="7" text-anchor="middle" font-family="'Playfair Display', serif" font-size="20" font-weight="bold" fill="#7f4f24">E</text>
+                <text x="-385" y="7" text-anchor="middle" font-family="'Playfair Display', serif" font-size="20" font-weight="bold" fill="#7f4f24">O</text>
+            </g>
+
+            <!-- Corner Vintage Vignettes -->
+            <g transform="translate(60, 60)">
+                <path d="M0,0 Q60,10 100,50 Q10,60 0,0" fill="none" stroke="#936639" stroke-width="2"/>
+                <text x="20" y="30" font-size="16">🪿</text>
+            </g>
+            <g transform="translate(940, 60) scale(-1, 1)">
+                <path d="M0,0 Q60,10 100,50 Q10,60 0,0" fill="none" stroke="#936639" stroke-width="2"/>
+            </g>
+            <g transform="translate(940, 830) scale(-1, -1)">
+                <path d="M0,0 Q60,10 100,50 Q10,60 0,0" fill="none" stroke="#936639" stroke-width="2"/>
+            </g>
+            <g transform="translate(60, 830) scale(1, -1)">
+                <path d="M0,0 Q60,10 100,50 Q10,60 0,0" fill="none" stroke="#936639" stroke-width="2"/>
+            </g>
+        `;
+
+        // 2. Generate smooth continuous curve through tile centers
+        let pathD = `M ${this.boardCoords[1].x} ${this.boardCoords[1].y}`;
+        for (let i = 2; i < this.boardCoords.length - 1; i++) {
             pathD += ` L ${this.boardCoords[i].x} ${this.boardCoords[i].y}`;
         }
         spiralPath.setAttribute('d', pathD);
 
-        // Render tiles
-        this.boardCoords.forEach(({ x, y, tile }) => {
+        // 3. Render Each Tile (1..=62) rotated along tangent
+        this.boardCoords.forEach(({ x, y, angle, tile }) => {
             if (tile.number === 0) {
-                // Starting nest
+                // Starting Nest
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 g.setAttribute('transform', `translate(${x}, ${y})`);
                 g.innerHTML = `
-                    <circle r="36" fill="#8d5b28" stroke="#ffb703" stroke-width="3" filter="url(#tileShadow)"/>
-                    <text y="-8" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">SALIDA</text>
-                    <text y="14" text-anchor="middle" font-size="22">🪺</text>
+                    <circle r="36" fill="#8d5b28" stroke="#ffb703" stroke-width="3" filter="url(#tileDropShadow)"/>
+                    <circle r="30" fill="#f4ebd0" stroke="#a07844" stroke-width="1.5" stroke-dasharray="4,2"/>
+                    <text y="-10" text-anchor="middle" font-size="11" font-weight="900" fill="#582f0e">SALIDA</text>
+                    <text y="14" text-anchor="middle" font-size="24">🪺</text>
                 `;
                 tilesGroup.appendChild(g);
                 return;
             }
 
             if (tile.number === 63) {
-                // Grand Center Garden (La Gran Oca)
+                // Grand Golden Center Garden Medallion
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 g.setAttribute('transform', `translate(${x}, ${y})`);
                 g.innerHTML = `
-                    <circle r="72" fill="url(#gardenGrad)" stroke="#8d5b28" stroke-width="6" filter="url(#tileShadow)"/>
-                    <circle r="60" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="6,4"/>
-                    <text y="-28" text-anchor="middle" font-size="18" fill="#1d3557" font-weight="900" letter-spacing="1">META 63</text>
-                    <text y="10" text-anchor="middle" font-size="44">🦆</text>
-                    <text y="42" text-anchor="middle" font-size="13" fill="#1d3557" font-weight="800">GRAN OCA</text>
+                    <!-- Center Grand Garden Medallion -->
+                    <circle r="78" fill="url(#gardenGrad)" stroke="#582f0e" stroke-width="5" filter="url(#medallionGlow)"/>
+                    <circle r="68" fill="#fefae0" stroke="#d4a373" stroke-width="2"/>
+                    <circle r="62" fill="#90e0ef" opacity="0.35"/>
+                    <circle r="60" fill="none" stroke="#ffb703" stroke-width="2" stroke-dasharray="6,4"/>
+
+                    <text y="-38" text-anchor="middle" font-family="'Playfair Display', serif" font-size="18" fill="#7f4f24" font-weight="900" letter-spacing="1">META 63</text>
+                    
+                    <!-- Majestic Crowned Goose Artwork -->
+                    <g transform="translate(0, 2)">
+                        <text y="-2" text-anchor="middle" font-size="20">👑</text>
+                        <text y="24" text-anchor="middle" font-size="46">🦆</text>
+                        <text y="38" text-anchor="middle" font-size="14">🪷</text>
+                    </g>
+
+                    <text y="52" text-anchor="middle" font-family="'Playfair Display', serif" font-size="12" fill="#582f0e" font-weight="900" letter-spacing="0.5">JARDÍN DE LA OCA</text>
                 `;
                 gardenGroup.appendChild(g);
                 return;
             }
 
-            // Normal and Special Tiles
+            // Normal and Special Tiles (1..=62)
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('transform', `translate(${x}, ${y})`);
-            g.setAttribute('class', `board-tile-item tile-${tile.tile_type}`);
+            g.setAttribute('class', `svg-tile-item tile-${tile.tile_type}`);
+            g.setAttribute('data-tile', tile.number);
 
-            let fillColor = 'url(#tileGradNormal)';
-            let strokeColor = '#b08968';
-            let icon = '';
-            let label = tile.number.toString();
+            let fillColor = '#fffdf7';
+            let strokeColor = '#8a5a36';
+            let strokeWidth = '1.8';
+            let iconDrawing = '';
 
             switch (tile.tile_type) {
                 case 'oca':
-                    fillColor = 'url(#tileGradOca)';
-                    strokeColor = '#ffd166';
-                    icon = '🦆';
+                    fillColor = '#e9f5ed';
+                    strokeColor = '#2a9d8f';
+                    strokeWidth = '2.5';
+                    iconDrawing = this.createGooseArtwork();
                     break;
                 case 'puente':
-                    fillColor = 'url(#tileGradPuente)';
-                    strokeColor = '#a8dadc';
-                    icon = '🌉';
+                    fillColor = '#e8f4f8';
+                    strokeColor = '#457b9d';
+                    strokeWidth = '2.5';
+                    iconDrawing = this.createBridgeArtwork();
                     break;
                 case 'dados':
-                    fillColor = '#8338ec';
-                    strokeColor = '#ffbe0b';
-                    icon = '🎲';
+                    fillColor = '#f3e8ff';
+                    strokeColor = '#9b5de5';
+                    strokeWidth = '2.5';
+                    iconDrawing = this.createDiceArtwork();
                     break;
                 case 'posada':
-                    fillColor = '#fb8500';
-                    strokeColor = '#ffffff';
-                    icon = '🏨';
+                    fillColor = '#fff1e6';
+                    strokeColor = '#e76f51';
+                    strokeWidth = '2.5';
+                    iconDrawing = this.createInnArtwork();
                     break;
                 case 'pozo':
-                    fillColor = '#3a5a40';
-                    strokeColor = '#a3b18a';
-                    icon = '🕳️';
+                    fillColor = '#eef3ef';
+                    strokeColor = '#52796f';
+                    strokeWidth = '2.5';
+                    iconDrawing = this.createWellArtwork();
                     break;
                 case 'laberinto':
-                    fillColor = '#0077b6';
-                    strokeColor = '#90e0ef';
-                    icon = '🌀';
+                    fillColor = '#e3fafc';
+                    strokeColor = '#0077b6';
+                    strokeWidth = '2.5';
+                    iconDrawing = this.createMazeArtwork();
                     break;
                 case 'carcel':
-                    fillColor = '#4a4e69';
-                    strokeColor = '#9a8c98';
-                    icon = '⛓️';
+                    fillColor = '#ede9fe';
+                    strokeColor = '#4a4e69';
+                    strokeWidth = '2.5';
+                    iconDrawing = this.createPrisonArtwork();
                     break;
                 case 'muerte':
-                    fillColor = 'url(#tileGradDanger)';
-                    strokeColor = '#ffffff';
-                    icon = '💀';
+                    fillColor = '#ffe3e3';
+                    strokeColor = '#c1121f';
+                    strokeWidth = '3';
+                    iconDrawing = this.createSkullArtwork();
                     break;
             }
 
-            const isSpecial = tile.tile_type !== 'normal';
-            const numFill = isSpecial ? '#ffffff' : '#4a3525';
+            // Rotate tile to follow track contour
+            const rot = angle;
 
             g.innerHTML = `
-                <rect class="svg-tile-rect" x="-42" y="-38" width="84" height="76" rx="10" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${isSpecial ? 2.5 : 1.5}"/>
-                <text class="svg-tile-text-num" x="${isSpecial ? '-22' : '0'}" y="${isSpecial ? '-18' : '-8'}" fill="${numFill}">${label}</text>
-                ${icon ? `<text class="svg-tile-icon" x="12" y="10">${icon}</text>` : ''}
+                <g transform="translate(${x}, ${y}) rotate(${rot})">
+                    <!-- Tile Capsule / Stepping Stone -->
+                    <rect class="svg-tile-capsule" x="-33" y="-23" width="66" height="46" rx="9" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>
+                    
+                    <!-- Number Badge -->
+                    <rect x="-31" y="-21" width="22" height="15" rx="5" fill="#f2e2be" stroke="${strokeColor}" stroke-width="0.8"/>
+                    <text class="svg-tile-text-num" x="-20" y="-13">${tile.number}</text>
+
+                    <!-- Icon or Artwork -->
+                    <g transform="translate(6, 0)">
+                        ${iconDrawing}
+                    </g>
+                </g>
             `;
 
             tilesGroup.appendChild(g);
@@ -224,13 +312,71 @@ class OcaGameApp {
         this.renderPlayerTokens();
     }
 
+    // ========================================================
+    // SVG ARTWORK HELPERS FOR SPECIAL TILES
+    // ========================================================
+    createGooseArtwork() {
+        return `
+            <circle r="13" fill="#2a9d8f" opacity="0.18"/>
+            <text y="4" text-anchor="middle" font-size="18">🦆</text>
+        `;
+    }
+
+    createBridgeArtwork() {
+        return `
+            <circle r="13" fill="#457b9d" opacity="0.18"/>
+            <text y="4" text-anchor="middle" font-size="18">🌉</text>
+        `;
+    }
+
+    createDiceArtwork() {
+        return `
+            <circle r="13" fill="#9b5de5" opacity="0.18"/>
+            <text y="4" text-anchor="middle" font-size="18">🎲</text>
+        `;
+    }
+
+    createInnArtwork() {
+        return `
+            <circle r="13" fill="#e76f51" opacity="0.18"/>
+            <text y="4" text-anchor="middle" font-size="18">🏨</text>
+        `;
+    }
+
+    createWellArtwork() {
+        return `
+            <circle r="13" fill="#52796f" opacity="0.18"/>
+            <text y="4" text-anchor="middle" font-size="18">🕳️</text>
+        `;
+    }
+
+    createMazeArtwork() {
+        return `
+            <circle r="13" fill="#0077b6" opacity="0.18"/>
+            <text y="4" text-anchor="middle" font-size="18">🌀</text>
+        `;
+    }
+
+    createPrisonArtwork() {
+        return `
+            <circle r="13" fill="#4a4e69" opacity="0.18"/>
+            <text y="4" text-anchor="middle" font-size="18">⛓️</text>
+        `;
+    }
+
+    createSkullArtwork() {
+        return `
+            <circle r="13" fill="#c1121f" opacity="0.25"/>
+            <text y="4" text-anchor="middle" font-size="18">💀</text>
+        `;
+    }
+
     renderPlayerTokens() {
         const tokensGroup = document.getElementById('svg-tokens-group');
         if (!tokensGroup || !this.room) return;
 
         tokensGroup.innerHTML = '';
 
-        // Group players by position so they don't overlap completely
         const posMap = {};
         this.room.players.forEach(p => {
             if (!posMap[p.position]) posMap[p.position] = [];
@@ -265,10 +411,228 @@ class OcaGameApp {
                 tokensGroup.appendChild(g);
             });
         });
+
+        this.updateRaceRadar();
     }
 
     // ========================================================
-    // 2. WEBSOCKET CONNECTION
+    // 2. CAMERA ENGINE (DYNAMIC AUTO-FOLLOW & PAN-ZOOM)
+    // ========================================================
+    setupCameraGestures() {
+        const viewport = document.getElementById('board-viewport');
+        const cameraEl = document.getElementById('board-camera');
+        if (!viewport || !cameraEl) return;
+
+        // Pointer drag & gestures
+        let isDown = false;
+        let lastTouches = [];
+
+        viewport.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.board-camera-controls')) return;
+            isDown = true;
+            this.camera.isDragging = true;
+            viewport.classList.add('grabbing');
+            cameraEl.classList.remove('camera-smooth');
+
+            this.camera.startX = e.clientX;
+            this.camera.startY = e.clientY;
+            this.camera.camStartX = this.camera.x;
+            this.camera.camStartY = this.camera.y;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!isDown) return;
+            const dx = e.clientX - this.camera.startX;
+            const dy = e.clientY - this.camera.startY;
+            this.camera.x = this.camera.camStartX + dx;
+            this.camera.y = this.camera.camStartY + dy;
+            this.applyCameraTransform();
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (isDown) {
+                isDown = false;
+                this.camera.isDragging = false;
+                viewport.classList.remove('grabbing');
+            }
+        });
+
+        // Touch Pinch-to-zoom
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                this.camera.pinchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                this.camera.pinchScale = this.camera.scale;
+                cameraEl.classList.remove('camera-smooth');
+            }
+        }, { passive: true });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                if (this.camera.pinchDist > 0) {
+                    const ratio = dist / this.camera.pinchDist;
+                    this.camera.scale = Math.min(Math.max(this.camera.pinchScale * ratio, 0.9), 3.2);
+                    this.applyCameraTransform();
+                }
+            }
+        }, { passive: true });
+
+        // Mouse Wheel Zoom
+        viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 0.15 : -0.15;
+            this.camera.scale = Math.min(Math.max(this.camera.scale + delta, 0.9), 3.0);
+            cameraEl.classList.remove('camera-smooth');
+            this.applyCameraTransform();
+        }, { passive: false });
+
+        // Double-tap to toggle zoom
+        let lastTap = 0;
+        viewport.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                this.toggleCameraZoom();
+            }
+            lastTap = now;
+        });
+
+        // Buttons
+        document.getElementById('btn-camera-toggle').addEventListener('click', () => {
+            this.toggleCameraZoom();
+        });
+
+        document.getElementById('btn-camera-center-me').addEventListener('click', () => {
+            this.centerOnMyToken();
+        });
+
+        document.getElementById('btn-zoom-in').addEventListener('click', () => {
+            this.camera.scale = Math.min(this.camera.scale + 0.35, 3.0);
+            this.camera.isZoomed = true;
+            this.updateCameraPillText();
+            this.applyCameraTransform(true);
+        });
+
+        document.getElementById('btn-zoom-out').addEventListener('click', () => {
+            this.camera.scale = Math.max(this.camera.scale - 0.35, 0.9);
+            if (this.camera.scale <= 1.05) this.camera.isZoomed = false;
+            this.updateCameraPillText();
+            this.applyCameraTransform(true);
+        });
+
+        document.getElementById('btn-zoom-reset').addEventListener('click', () => {
+            this.resetCameraToFullView();
+        });
+    }
+
+    applyCameraTransform(smooth = false) {
+        const cameraEl = document.getElementById('board-camera');
+        if (!cameraEl) return;
+
+        if (smooth) {
+            cameraEl.classList.add('camera-smooth');
+        } else {
+            cameraEl.classList.remove('camera-smooth');
+        }
+
+        cameraEl.style.transform = `translate3d(${this.camera.x}px, ${this.camera.y}px, 0) scale(${this.camera.scale})`;
+    }
+
+    toggleCameraZoom() {
+        this.camera.isZoomed = !this.camera.isZoomed;
+        this.updateCameraPillText();
+
+        if (this.camera.isZoomed) {
+            this.focusCameraOnTile(this.camera.targetTile || 1, true);
+        } else {
+            this.resetCameraToFullView();
+        }
+    }
+
+    updateCameraPillText() {
+        const pill = document.getElementById('btn-camera-toggle');
+        const text = document.getElementById('cam-mode-text');
+        if (!pill || !text) return;
+
+        if (this.camera.isZoomed) {
+            pill.classList.add('active');
+            text.textContent = 'Zoom Acción';
+        } else {
+            pill.classList.remove('active');
+            text.textContent = 'Vista Completa';
+        }
+    }
+
+    resetCameraToFullView() {
+        this.camera.isZoomed = false;
+        this.camera.scale = 1.0;
+        this.camera.x = 0;
+        this.camera.y = 0;
+        this.updateCameraPillText();
+        this.applyCameraTransform(true);
+    }
+
+    focusCameraOnTile(tileNum, smooth = true) {
+        const viewport = document.getElementById('board-viewport');
+        if (!viewport || this.boardCoords.length === 0) return;
+
+        const coords = this.boardCoords[tileNum] || this.boardCoords[0];
+        this.camera.targetTile = tileNum;
+
+        const isMobile = window.innerWidth < 768;
+        const targetScale = isMobile ? 2.2 : 1.7;
+        this.camera.scale = targetScale;
+        this.camera.isZoomed = true;
+        this.updateCameraPillText();
+
+        const vWidth = viewport.clientWidth;
+        const vHeight = viewport.clientHeight;
+
+        // Position of tile in 1000x890 coordinate space
+        const targetX = (vWidth / 2) - (coords.x * (vWidth / 1000)) * targetScale;
+        const targetY = (vHeight / 2) - (coords.y * (vHeight / 890)) * targetScale;
+
+        this.camera.x = targetX;
+        this.camera.y = targetY;
+
+        this.applyCameraTransform(smooth);
+    }
+
+    centerOnMyToken() {
+        if (!this.room || !this.myId) return;
+        const me = this.room.players.find(p => p.id === this.myId);
+        if (me) {
+            this.focusCameraOnTile(me.position, true);
+        }
+    }
+
+    updateRaceRadar() {
+        const container = document.getElementById('radar-runners');
+        if (!container || !this.room) return;
+
+        container.innerHTML = '';
+        this.room.players.forEach(p => {
+            const dot = document.createElement('div');
+            dot.className = 'radar-runner-dot';
+            dot.style.backgroundColor = p.color;
+            const pct = Math.min((p.position / 63) * 100, 100);
+            dot.style.left = `${pct}%`;
+            dot.textContent = p.avatar;
+            dot.title = `${p.name} (Casilla ${p.position})`;
+
+            dot.addEventListener('click', () => {
+                this.focusCameraOnTile(p.position, true);
+            });
+
+            container.appendChild(dot);
+        });
+    }
+
+    // ========================================================
+    // 3. WEBSOCKET CONNECTION
     // ========================================================
     connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -278,7 +642,6 @@ class OcaGameApp {
 
         this.ws.onopen = () => {
             console.log('Conectado al servidor de El Juego de la Oca');
-            // Keep alive ping every 30s
             if (this.pingInterval) clearInterval(this.pingInterval);
             this.pingInterval = setInterval(() => {
                 if (this.ws.readyState === WebSocket.OPEN) {
@@ -309,7 +672,7 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 3. SERVER MESSAGES HANDLING
+    // 4. SERVER MESSAGES HANDLING
     // ========================================================
     handleServerMessage(data) {
         switch (data.type) {
@@ -356,30 +719,36 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 4. GAME FLOW & ANIMATIONS
+    // 5. GAME FLOW & ACTION-CAM ANIMATIONS
     // ========================================================
     async handleTurnEvent(event) {
         this.isAnimating = true;
         const rollBtn = document.getElementById('btn-roll-dice');
         if (rollBtn) rollBtn.disabled = true;
 
-        // 1. Animate Dice Roll
+        // 1. Auto-Follow Camera: Focus on active token as soon as turn begins
+        this.focusCameraOnTile(event.from_pos, true);
+
+        // 2. Animate Dice Roll
         this.animateDiceRoll(event.dice, event.total);
         if (window.ocaAudio) window.ocaAudio.playDiceRoll();
 
         await this.sleep(850);
 
-        // 2. Animate step-by-step movement along the path
+        // 3. Hop through path and camera follows dynamically!
         if (event.path && event.path.length > 0) {
             for (let i = 0; i < event.path.length; i++) {
                 const stepPos = event.path[i];
                 this.moveTokenTo(event.player_id, stepPos);
+                // Action cam keeps following active player
+                this.focusCameraOnTile(stepPos, true);
+
                 if (window.ocaAudio) window.ocaAudio.playStep();
                 await this.sleep(260);
             }
         }
 
-        // 3. Handle Special Tile Triggers & Rhymes
+        // 4. Handle Special Tile Triggers & Rhymes
         if (event.rhyme) {
             this.showRhymeBanner(event.tile_type, event.rhyme);
         }
@@ -407,10 +776,11 @@ class OcaGameApp {
             }
         }
 
-        // 4. Log event
+        // 5. Log event & update radar
         this.addLogEntry(event);
+        this.updateRaceRadar();
 
-        // 5. Handle Win
+        // 6. Handle Win
         if (event.is_win) {
             this.showVictoryModal(event.player_name);
             this.startConfetti();
@@ -500,7 +870,7 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 5. UI VIEWS & UPDATES
+    // 6. UI VIEWS & UPDATES
     // ========================================================
     switchView(viewId) {
         document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
@@ -532,7 +902,6 @@ class OcaGameApp {
 
         this.updateWaitingPlayersList();
 
-        // Show/hide host controls
         const hostControls = document.getElementById('host-controls');
         const guestControls = document.getElementById('guest-controls');
         if (this.isHost) {
@@ -574,6 +943,7 @@ class OcaGameApp {
         this.switchView('game-view');
         this.renderPlayerTokens();
         this.updateRoomStateUI();
+        this.resetCameraToFullView();
     }
 
     updateRoomStateUI() {
@@ -584,7 +954,6 @@ class OcaGameApp {
             return;
         }
 
-        // Current turn info
         const currPlayer = this.room.players[this.room.current_turn];
         if (currPlayer) {
             document.getElementById('turn-avatar').textContent = currPlayer.avatar;
@@ -598,11 +967,10 @@ class OcaGameApp {
             }
         }
 
-        // Update players list standings in sidebar
+        // Standings leaderboard in sidebar (click to fly camera!)
         const listContainer = document.getElementById('game-players-list');
         if (listContainer) {
             listContainer.innerHTML = '';
-            // Sort by position descending
             const sorted = [...this.room.players].sort((a, b) => b.position - a.position);
 
             sorted.forEach(p => {
@@ -610,6 +978,8 @@ class OcaGameApp {
                 const isCurr = currPlayer && (p.id === currPlayer.id);
                 item.className = `game-player-item ${isCurr ? 'current-turn' : ''}`;
                 item.style.borderLeft = `4px solid ${p.color}`;
+                item.style.cursor = 'pointer';
+                item.title = `Toca para enfocar a ${p.name}`;
 
                 let trapTag = '';
                 if (p.in_well) trapTag = '<span class="game-player-trap">🕳️ En el Pozo</span>';
@@ -622,6 +992,12 @@ class OcaGameApp {
                     ${trapTag}
                     <span class="game-player-pos">Casilla ${p.position}</span>
                 `;
+
+                // Tapping a player zooms the camera right onto their token
+                item.addEventListener('click', () => {
+                    this.focusCameraOnTile(p.position, true);
+                });
+
                 listContainer.appendChild(item);
             });
         }
@@ -681,10 +1057,9 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 6. EVENT LISTENERS
+    // 7. EVENT LISTENERS
     // ========================================================
     setupEventListeners() {
-        // Tab switching in lobby
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const target = e.currentTarget.getAttribute('data-target');
@@ -692,7 +1067,6 @@ class OcaGameApp {
             });
         });
 
-        // Tab switching in sidebar log/chat
         document.querySelectorAll('.log-tab').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.log-tab').forEach(b => b.classList.remove('active'));
@@ -703,7 +1077,6 @@ class OcaGameApp {
             });
         });
 
-        // Avatar selector
         document.querySelectorAll('.avatar-opt').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.avatar-opt').forEach(b => b.classList.remove('active'));
@@ -712,7 +1085,6 @@ class OcaGameApp {
             });
         });
 
-        // Color selector
         document.querySelectorAll('.color-opt').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.color-opt').forEach(b => b.classList.remove('active'));
@@ -721,7 +1093,6 @@ class OcaGameApp {
             });
         });
 
-        // Create Room
         document.getElementById('btn-create-room').addEventListener('click', () => {
             const name = document.getElementById('player-name-input').value.trim() || 'Jugador 1';
             const twoDice = document.getElementById('chk-two-dice').checked;
@@ -734,7 +1105,6 @@ class OcaGameApp {
             });
         });
 
-        // Join Room
         document.getElementById('btn-join-room').addEventListener('click', () => {
             const code = document.getElementById('join-code-input').value.trim().toUpperCase();
             const name = document.getElementById('player-name-input').value.trim() || 'Jugador';
@@ -751,7 +1121,6 @@ class OcaGameApp {
             });
         });
 
-        // Quick Solo vs Bots
         document.getElementById('btn-quick-solo').addEventListener('click', () => {
             const name = document.getElementById('player-name-input').value.trim() || 'Jugador 1';
             this.send({
@@ -761,7 +1130,6 @@ class OcaGameApp {
                 avatar: this.selectedAvatar,
                 two_dice: true
             });
-            // Automatically add bots after creation
             setTimeout(() => {
                 this.send({ action: 'add_bot' });
                 this.send({ action: 'add_bot' });
@@ -771,22 +1139,18 @@ class OcaGameApp {
             }, 500);
         });
 
-        // Add Bot
         document.getElementById('btn-add-bot').addEventListener('click', () => {
             this.send({ action: 'add_bot' });
         });
 
-        // Start Game
         document.getElementById('btn-start-game').addEventListener('click', () => {
             this.send({ action: 'start_game' });
         });
 
-        // Roll Dice
         document.getElementById('btn-roll-dice').addEventListener('click', () => {
             this.send({ action: 'roll_dice' });
         });
 
-        // Copy room code
         document.getElementById('btn-copy-code').addEventListener('click', () => {
             if (!this.room) return;
             const url = `${window.location.origin}${window.location.pathname}?room=${this.room.code}`;
@@ -798,7 +1162,6 @@ class OcaGameApp {
             });
         });
 
-        // Quick reaction shouts
         document.querySelectorAll('.btn-shout').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const shout = e.currentTarget.getAttribute('data-shout');
@@ -809,7 +1172,6 @@ class OcaGameApp {
             });
         });
 
-        // Chat Form
         document.getElementById('chat-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const input = document.getElementById('chat-input');
@@ -820,7 +1182,6 @@ class OcaGameApp {
             }
         });
 
-        // Sound Toggle
         document.getElementById('btn-sound').addEventListener('click', (e) => {
             if (window.ocaAudio) {
                 this.soundEnabled = window.ocaAudio.toggleMute();
@@ -828,7 +1189,6 @@ class OcaGameApp {
             }
         });
 
-        // Rules Modal
         document.getElementById('btn-rules').addEventListener('click', () => {
             document.getElementById('rules-modal').classList.remove('hidden');
         });
@@ -839,14 +1199,12 @@ class OcaGameApp {
             document.getElementById('rules-modal').classList.add('hidden');
         });
 
-        // Leave / Back
         document.getElementById('btn-leave').addEventListener('click', () => {
             if (confirm('¿Deseas salir de la sala actual?')) {
                 window.location.reload();
             }
         });
 
-        // Restart Game
         document.getElementById('btn-restart-game').addEventListener('click', () => {
             document.getElementById('victory-modal').classList.add('hidden');
             this.send({ action: 'restart_game' });
@@ -871,7 +1229,7 @@ class OcaGameApp {
     }
 
     // ========================================================
-    // 7. CONFETTI CELEBRATION
+    // 8. CONFETTI CELEBRATION
     // ========================================================
     setupConfetti() {
         this.confettiCanvas.width = window.innerWidth;
@@ -932,7 +1290,6 @@ class OcaGameApp {
     }
 }
 
-// Start application when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
     window.ocaApp = new OcaGameApp();
 });

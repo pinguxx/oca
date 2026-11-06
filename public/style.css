@@ -684,17 +684,164 @@ body {
   border-radius: 20px;
 }
 
-/* Board Wrapper and SVG */
+/* Mini Race Radar (Standings Bar) */
+.race-radar-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+.radar-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-gold);
+  white-space: nowrap;
+}
+
+.radar-track {
+  position: relative;
+  flex: 1;
+  height: 12px;
+  background: var(--bg-dark);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 183, 3, 0.2);
+  overflow: visible;
+}
+
+.radar-runners {
+  position: absolute;
+  inset: 0;
+}
+
+.radar-runner-dot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  z-index: 5;
+}
+
+/* Board Wrapper and Camera Viewport */
 .board-wrapper {
-  background: #fdfaf0;
-  border: 6px solid #8d5b28;
-  border-radius: 20px;
+  background: #2b180d;
+  border: 8px solid #5a3818;
+  border-radius: 24px;
   box-shadow: 
-    0 12px 36px rgba(0,0,0,0.4),
-    inset 0 0 20px rgba(141, 91, 40, 0.25);
+    0 16px 45px rgba(0,0,0,0.6),
+    inset 0 0 25px rgba(0,0,0,0.5);
   overflow: hidden;
   position: relative;
   aspect-ratio: 1000 / 890;
+  user-select: none;
+}
+
+/* Floating Camera Controls */
+.board-camera-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.btn-cam-pill {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 183, 3, 0.5);
+  color: var(--text-bright);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-cam-pill:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: var(--color-gold);
+  transform: translateY(-1px);
+}
+
+.btn-cam-pill.active {
+  background: linear-gradient(135deg, var(--color-gold), var(--color-orange));
+  color: #1a1a1a;
+  border-color: #ffffff;
+}
+
+.zoom-stepper {
+  display: flex;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 183, 3, 0.4);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.btn-cam-mini {
+  background: transparent;
+  border: none;
+  color: var(--text-bright);
+  font-weight: 800;
+  font-size: 0.9rem;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.btn-cam-mini:hover {
+  background: rgba(255, 183, 3, 0.25);
+  color: var(--color-gold);
+}
+
+.board-viewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+  cursor: grab;
+}
+
+.board-viewport.grabbing {
+  cursor: grabbing;
+}
+
+.board-camera {
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.board-camera.camera-smooth {
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .oca-board-svg {
@@ -703,37 +850,51 @@ body {
   display: block;
 }
 
-/* Board SVG Elements */
+/* Board SVG Elements & Nautic Parchment Styling */
 .board-spiral-path {
-  stroke: #e2cfa2;
-  stroke-width: 76;
+  stroke: url(#trackGrad);
+  stroke-width: 82;
   stroke-linecap: round;
   stroke-linejoin: round;
   fill: none;
+  filter: drop-shadow(0 4px 8px rgba(60, 40, 20, 0.25));
 }
 
-.svg-tile-rect {
-  rx: 8;
-  ry: 8;
+.board-rail-outer, .board-rail-inner {
+  stroke: #a07844;
+  stroke-width: 2;
+  stroke-dasharray: 6,4;
+  opacity: 0.75;
+}
+
+.svg-tile-capsule {
+  rx: 10;
+  ry: 10;
   stroke: #7f5539;
   stroke-width: 1.5;
-  filter: url(#tileShadow);
-  transition: all 0.2s ease;
+  filter: url(#tileDropShadow);
+  transition: transform 0.2s ease;
 }
 
 .svg-tile-text-num {
   font-family: var(--font-body);
   font-weight: 800;
-  font-size: 15px;
-  fill: #4a3525;
+  font-size: 13px;
+  fill: #3e2714;
   text-anchor: middle;
   dominant-baseline: central;
 }
 
-.svg-tile-icon {
+/* Special Vignettes */
+.svg-vignette-icon {
   font-size: 20px;
   text-anchor: middle;
   dominant-baseline: central;
+}
+
+.svg-tile-item:hover .svg-tile-capsule {
+  stroke: #ffb703;
+  stroke-width: 2.5;
 }
 
 /* Player Tokens on SVG */

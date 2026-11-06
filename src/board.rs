@@ -30,6 +30,8 @@ pub struct TileInfo {
     pub row: u8,
     pub x_pct: f32,
     pub y_pct: f32,
+    #[serde(default)]
+    pub angle_deg: f32,
 }
 
 #[allow(dead_code)]
@@ -52,7 +54,7 @@ impl BoardDefinition {
     pub fn classic() -> Self {
         let mut tiles = Vec::with_capacity((TOTAL_TILES + 1) as usize);
 
-        // Tile 0: Start / Nido de Salida
+        // Tile 0: Start / Nido de Salida (outside tile 1)
         tiles.push(TileInfo {
             number: 0,
             tile_type: TileType::Normal,
@@ -62,16 +64,17 @@ impl BoardDefinition {
             extra_turn: false,
             skip_turns: 0,
             col: 0,
-            row: 7,
-            x_pct: 3.5,
-            y_pct: 94.0,
+            row: 4,
+            x_pct: 6.5,
+            y_pct: 58.4,
+            angle_deg: 275.0,
         });
 
-        // Spiral grid coordinates mapping 1..=63 in a 9x8 grid
+        // Nautilus spiral coordinates mapping 1..=63
         let coords = Self::generate_spiral_coordinates();
 
         for num in 1..=TOTAL_TILES {
-            let (col, row, x_pct, y_pct) = coords[(num - 1) as usize];
+            let (col, row, x_pct, y_pct, angle_deg) = coords[(num - 1) as usize];
             let (tile_type, name, rhyme, target, extra, skip) = Self::tile_rule(num);
 
             tiles.push(TileInfo {
@@ -86,6 +89,7 @@ impl BoardDefinition {
                 row,
                 x_pct,
                 y_pct,
+                angle_deg,
             });
         }
 
@@ -95,78 +99,80 @@ impl BoardDefinition {
         }
     }
 
-    /// Generates spiral grid coordinates (col 0..8, row 0..7) for tiles 1 to 63
-    pub fn generate_spiral_coordinates() -> Vec<(u8, u8, f32, f32)> {
+    /// Generates smooth oval nautilus spiral coordinates parameterized by arc length
+    pub fn generate_spiral_coordinates() -> Vec<(u8, u8, f32, f32, f32)> {
+        const CX: f32 = 500.0;
+        const CY: f32 = 445.0;
+        const A0: f32 = 430.0;
+        const B0: f32 = 360.0;
+        const TOTAL_LOOPS: f32 = 3.12;
+        const START_ANGLE: f32 = std::f32::consts::PI * 0.96;
+        const N: usize = 2000;
+
+        // 1. Generate dense curve points
+        let mut samples = Vec::with_capacity(N + 1);
+        for s in 0..=N {
+            let t = s as f32 / N as f32;
+            let theta = START_ANGLE + t * TOTAL_LOOPS * 2.0 * std::f32::consts::PI;
+            let a = A0 - t * 310.0;
+            let b = B0 - t * 255.0;
+            let x = CX + a * theta.cos();
+            let y = CY + b * theta.sin();
+            samples.push((x, y));
+        }
+
+        // 2. Cumulative arc length
+        let mut cum_lens = Vec::with_capacity(N + 1);
+        cum_lens.push(0.0);
+        let mut total_len = 0.0;
+        for i in 1..=N {
+            let (x0, y0) = samples[i - 1];
+            let (x1, y1) = samples[i];
+            let seg_len = ((x1 - x0).powi(2) + (y1 - y0).powi(2)).sqrt();
+            total_len += seg_len;
+            cum_lens.push(total_len);
+        }
+
+        // 3. Sample 62 tiles along curve, and tile 63 in center garden
         let mut list = Vec::with_capacity(TOTAL_TILES as usize);
+        for i in 1..=62 {
+            let target_dist = ((i as f32 - 0.5) / 62.5) * total_len;
+            let mut idx = 0;
+            while idx < N && cum_lens[idx] < target_dist {
+                idx += 1;
+            }
+            let prev_idx = if idx > 0 { idx - 1 } else { 0 };
+            let (x0, y0) = samples[prev_idx];
+            let (x1, y1) = samples[idx];
+            let d_prev = cum_lens[prev_idx];
+            let d_curr = cum_lens[idx];
+            let span = (d_curr - d_prev).max(0.001);
+            let frac = (target_dist - d_prev) / span;
 
-        // 9 columns (0..8) and 8 rows (0..7)
-        // Ring 1 (outer): 30 tiles
-        // Row 7 (bottom): (0,7) -> (8,7) [9 tiles, 1..=9]
-        for c in 0..=8 {
-            list.push((c, 7));
-        }
-        // Col 8 (right): (8,6) down to (8,0) [7 tiles, 10..=16]
-        for r in (0..=6).rev() {
-            list.push((8, r));
-        }
-        // Row 0 (top): (7,0) down to (0,0) [8 tiles, 17..=24]
-        for c in (0..=7).rev() {
-            list.push((c, 0));
-        }
-        // Col 0 (left): (0,1) to (0,6) [6 tiles, 25..=30]
-        for r in 1..=6 {
-            list.push((0, r));
-        }
+            let x = x0 + frac * (x1 - x0);
+            let y = y0 + frac * (y1 - y0);
 
-        // Ring 2: 22 tiles
-        // Row 6: (1,6) to (7,6) [7 tiles, 31..=37]
-        for c in 1..=7 {
-            list.push((c, 6));
-        }
-        // Col 7: (7,5) down to (7,1) [5 tiles, 38..=42]
-        for r in (1..=5).rev() {
-            list.push((7, r));
-        }
-        // Row 1: (6,1) down to (1,1) [6 tiles, 43..=48]
-        for c in (1..=6).rev() {
-            list.push((c, 1));
-        }
-        // Col 1: (1,2) to (1,5) [4 tiles, 49..=52]
-        for r in 2..=5 {
-            list.push((1, r));
+            let dx = x1 - x0;
+            let dy = y1 - y0;
+            let angle_rad = dy.atan2(dx);
+            let mut angle_deg = angle_rad.to_degrees();
+            if angle_deg < 0.0 {
+                angle_deg += 360.0;
+            }
+
+            let x_pct = ((x / 1000.0) * 100.0 * 10.0).round() / 10.0;
+            let y_pct = ((y / 890.0) * 100.0 * 10.0).round() / 10.0;
+
+            let ring = (i as f32 / 20.0).floor() as u8;
+            let quadrant = (((angle_deg + 45.0) / 90.0).floor() as u8) % 4;
+
+            list.push((ring, quadrant, x_pct, y_pct, (angle_deg * 10.0).round() / 10.0));
         }
 
-        // Ring 3: 10 tiles
-        // Row 5: (2,5) to (6,5) [5 tiles, 53..=57]
-        for c in 2..=6 {
-            list.push((c, 5));
-        }
-        // Col 6: (6,4) down to (6,2) [3 tiles, 58..=60]
-        for r in (2..=4).rev() {
-            list.push((6, r));
-        }
-        // Row 2: (5,2) down to (4,2) [2 tiles, 61..=62]
-        list.push((5, 2));
-        list.push((4, 2));
+        // Tile 63: Center Grand Garden
+        list.push((3, 0, 50.0, 50.0, 0.0));
 
-        // Tile 63: Center Garden (La Gran Oca)
-        // Positioned centrally in cells (3,3)-(4,4)
-        list.push((3, 3));
-
-        // Convert (col, row) to percentage (0.0 to 100.0%)
-        list.into_iter()
-            .enumerate()
-            .map(|(idx, (col, row))| {
-                if idx + 1 == 63 {
-                    // Center garden gets custom prominent center alignment
-                    (col, row, 44.4, 43.8)
-                } else {
-                    let x_pct = ((col as f32 + 0.5) / 9.0) * 100.0;
-                    let y_pct = ((row as f32 + 0.5) / 8.0) * 100.0;
-                    (col, row, (x_pct * 10.0).round() / 10.0, (y_pct * 10.0).round() / 10.0)
-                }
-            })
-            .collect()
+        list
     }
 
     /// Returns rules for a tile: (TileType, Name, Rhyme, TargetTile, ExtraTurn, SkipTurns)
