@@ -137,13 +137,24 @@ pub fn maybe_schedule_bot_turn(state: AppState, room_code: String, delay_ms: u64
                     Some("¡Gané la Gran Oca! ¡Viva México! 🏆🦆".to_string())
                 } else {
                     match event.tile_type {
-                        TileType::Oca => Some("¡De oca a oca y tiro porque me toca! 🦆".to_string()),
-                        TileType::Puente => Some("¡De puente a puente y tiro porque me lleva la corriente! 🌉".to_string()),
-                        TileType::Dados => Some("¡De dados a dados y tiro porque me ha tocado! 🎲".to_string()),
+                        TileType::Oca => {
+                            Some("¡De oca a oca y tiro porque me toca! 🦆".to_string())
+                        }
+                        TileType::Puente => Some(
+                            "¡De puente a puente y tiro porque me lleva la corriente! 🌉"
+                                .to_string(),
+                        ),
+                        TileType::Dados => {
+                            Some("¡De dados a dados y tiro porque me ha tocado! 🎲".to_string())
+                        }
                         TileType::Pozo => Some("¡Ayúdenme, me caí al pozo! 🕳️".to_string()),
-                        TileType::Posada => Some("A descansar un ratito en la posada... 🏨".to_string()),
+                        TileType::Posada => {
+                            Some("A descansar un ratito en la posada... 🏨".to_string())
+                        }
                         TileType::Carcel => Some("¡Soy inocente, oficial! ⛓️".to_string()),
-                        TileType::Muerte => Some("¡Noooo, la Calaca me regresó al inicio! 💀".to_string()),
+                        TileType::Muerte => {
+                            Some("¡Noooo, la Calaca me regresó al inicio! 💀".to_string())
+                        }
                         TileType::Laberinto => Some("¡Me perdí en el laberinto! 🌀".to_string()),
                         _ => {
                             let mut rng = rand::rng();

@@ -1112,11 +1112,14 @@ class OcaGameApp {
             case 'turn_played':
                 if (data.room) {
                     this.room = data.room;
-                    this.updateRoomStateUI();
+                    this.isHost = (this.room.host_id === this.myId);
+                    if (!this.isProcessingQueue && !this.isAnimating) {
+                        this.updateRoomStateUI();
+                    }
                 }
                 if (data.event) {
                     if (data.was_timeout) {
-                        this.showToast(`⏱️ Tiempo agotado: se tiró automáticamente para ${data.event.player_name}`);
+                        this.showToast(`⏱️ Tiempo agotado (20s): se tiró automáticamente para ${data.event.player_name}`);
                     }
                     this.enqueueTurnEvent(data.event);
                 }
@@ -1163,7 +1166,9 @@ class OcaGameApp {
         this.activeMovingPlayerId = null;
         this.isAnimating = false;
         this.renderPlayerTokens();
+        this.updateRoomStateUI();
         this.updateTurnControls();
+        this.updateTurnTimerDisplay();
     }
 
     async handleTurnEvent(event) {
