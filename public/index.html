@@ -408,21 +408,7 @@
         </div>
       </div>
 
-      <!-- Podium of Honor (Top 3 Players) -->
-      <div class="victory-section">
-        <h4 class="victory-section-title" data-i18n="podiumTitle">🏆 Podio de Honor</h4>
-        <div id="victory-podium" class="podium-row"></div>
-      </div>
-
-      <!-- Medals and Awards / Prizes Grid -->
-      <div class="victory-section">
-        <h4 class="victory-section-title" data-i18n="awardsTitle">🎖️ Medallas y Reconocimientos del Tablero</h4>
-        <div id="victory-awards" class="awards-grid"></div>
-      </div>
-
-      <!-- Hidden Canvas for Trophy Card -->
-      <canvas id="victory-canvas" width="800" height="1000" class="hidden"></canvas>
-
+      <!-- Action Buttons: Prominently placed right below Winner Stats so they are ALWAYS visible without scrolling! -->
       <div class="modal-actions victory-actions-grid" id="winner-actions">
         <button class="btn btn-share-victory btn-lg" id="btn-share-victory" data-i18n="btnShareVictory">
           📸 Compartir Victoria
@@ -434,8 +420,23 @@
           🏠 Volver al Menú Principal
         </button>
       </div>
+
+      <!-- Podium of Honor (Top 3 Players) -->
+      <div class="victory-section">
+        <h4 class="victory-section-title" data-i18n="podiumTitle">🏆 Podio de Honor</h4>
+        <div id="victory-podium" class="podium-row"></div>
+      </div>
+
+      <!-- Medals and Awards / Prizes Grid -->
+      <div class="victory-section">
+        <h4 class="victory-section-title" data-i18n="awardsTitle">🎖️ Medallas y Reconocimientos del Tablero</h4>
+        <div id="victory-awards" class="awards-grid"></div>
+      </div>
     </div>
   </div>
+
+  <!-- Off-screen Canvas for Generating Shareable Trophy Card (Takes 0 layout space) -->
+  <canvas id="victory-canvas" width="800" height="1000" style="display: none !important; position: absolute; left: -9999px; width: 0; height: 0; pointer-events: none;"></canvas>
 
   <!-- Rulebook Modal -->
   <div id="rules-modal" class="modal-backdrop hidden">

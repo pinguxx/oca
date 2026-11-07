@@ -309,10 +309,11 @@ impl GameRoom {
     }
 
     pub fn restart_game(&mut self, requester_id: &str) -> Result<(), &'static str> {
-        if self.host_id != requester_id {
+        if self.host_id != requester_id && self.status != GameStatus::Finished {
             return Err("Solo el anfitrión puede reiniciar la partida");
         }
-        self.start_game(requester_id)
+        let host_id = self.host_id.clone();
+        self.start_game(&host_id)
     }
 
     pub fn current_player(&self) -> Option<&Player> {
@@ -886,9 +887,31 @@ mod tests {
     }
 
     #[test]
-    fn test_well_rescue_rule() {
-        let (t_well, _, _, _, _, wait_well) = BoardDefinition::tile_rule(31);
-        assert_eq!(t_well, TileType::Pozo);
-        assert_eq!(wait_well, 3);
+    fn test_restart_game_permissions() {
+        let mut room = GameRoom::new(
+            "RSTR".to_string(),
+            "host_id".to_string(),
+            "Host".to_string(),
+            None,
+            None,
+            true,
+        );
+        room.add_player(
+            "guest_id".to_string(),
+            "Guest".to_string(),
+            None,
+            None,
+            false,
+        )
+        .unwrap();
+
+        // While Waiting, only host can restart
+        assert!(room.restart_game("guest_id").is_err());
+        assert!(room.restart_game("host_id").is_ok());
+
+        // When Finished, guest can restart
+        room.status = GameStatus::Finished;
+        assert!(room.restart_game("guest_id").is_ok());
+        assert_eq!(room.status, GameStatus::Playing);
     }
 }

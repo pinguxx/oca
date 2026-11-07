@@ -2129,11 +2129,15 @@ class OcaGameApp {
             });
         }
 
-        // Host controls on restart
+        // Victory modal action controls - always clearly visible for all players
+        const shareBtn = document.getElementById('btn-share-victory');
+        if (shareBtn) shareBtn.style.display = 'flex';
+
         const restartBtn = document.getElementById('btn-restart-game');
-        if (restartBtn) {
-            restartBtn.style.display = this.isHost ? 'flex' : 'none';
-        }
+        if (restartBtn) restartBtn.style.display = 'flex';
+
+        const lobbyBtn = document.getElementById('btn-victory-back-lobby');
+        if (lobbyBtn) lobbyBtn.style.display = 'flex';
 
         modal.classList.remove('hidden');
     }
