@@ -3,6 +3,177 @@
 // Tablero Tradicional Ilustrado con Cartas, Rosetas & Cámara Fija
 // ========================================================
 
+const I18N = {
+    es: {
+        logoTitle: 'EL JUEGO DE LA OCA',
+        logoSubtitle: '¡De oca a oca y tiro porque me toca! 🎲',
+        btnLang: '🌐 EN',
+        rulesTitle: 'Reglas del Juego',
+        soundTitle: 'Alternar Sonido',
+        leaveTitle: 'Salir de la Sala',
+        heroTitle: '¡Bienvenido al Gran Juego de la Oca!',
+        heroDesc: 'El tradicional juego de mesa de 63 casillas en espiral con sus puentes, posada, laberinto, dados, cárcel y la temida muerte.',
+        playerNameLabel: 'Tu Nombre o Apodo:',
+        playerNamePh: 'Escribe tu nombre o apodo...',
+        chooseAvatarLabel: 'Elige tu Ficha y Mascota:',
+        chooseColorLabel: 'Elige tu Color Tradicional:',
+        tabCreate: '✨ Crear Sala',
+        tabJoin: '🔗 Unirse a Sala',
+        tabLocal: '🤖 Solitario / Local',
+        turnTimerLabel: '⏱️ Tiempo por Turno (AFK):',
+        timer20: '⏱️ 20 segundos (Recomendado)',
+        timer15: '⏱️ 15 segundos (Rápido)',
+        timer30: '⏱️ 30 segundos (Tranquilo)',
+        timer0: '♾️ Sin límite (Manual)',
+        twoDiceRule: 'Jugar con 2 dados clásicos (incluye regla del 9 inicial)',
+        btnCreateRoom: 'Crear Sala Multijugador 🚀',
+        joinCodePh: 'CÓDIGO (ej. OC25)',
+        btnJoinRoom: 'Unirse',
+        tabNote: 'Juega inmediatamente contra oponentes controlados por la computadora (Bots inteligentes).',
+        btnQuickSolo: '¡Comenzar Partida Solitario vs Bots! 🤖',
+        badgeWaiting: 'SALA DE ESPERA',
+        roomCodeLabel: 'Código de Sala:',
+        btnCopy: '📋 Copiar',
+        qrHint: 'Escanea el código QR con tu celular para unirte',
+        playersInRoom: 'Jugadores en la Sala',
+        btnAddBot: '+ Agregar Bot 🤖',
+        btnStartGame: '¡Iniciar Partida Ahora! 🏁',
+        guestWaitMsg: 'Esperando a que el anfitrión inicie la partida...',
+        turnLabel: 'TURNO ACTUAL',
+        turnStatusWaiting: 'Esperando tiro...',
+        turnStatusYourTurn: '¡Tu turno! Tira los dados 🎲',
+        turnStatusRolling: 'Lanzando dados...',
+        radarStart: '🏁 Salida',
+        radarGoal: 'Meta 63 🏆',
+        camFollow: 'Seguir',
+        camOverview: 'Ver Todo',
+        diceRollTitle: 'Tirada de Dados',
+        diceTotalLabel: 'Total:',
+        btnRollDice: '🎲 ¡TIRAR DADOS! 🎲',
+        btnRollingDice: '🎲 ¡Tirando...',
+        standingsTitle: 'Posiciones',
+        tabLog: '📜 Crónica',
+        tabChat: '💬 Chat & Porras',
+        chatInputPh: 'Escribe un mensaje...',
+        chatSendBtn: 'Enviar',
+        victoryHeadline: '¡TENEMOS UN CAMPEÓN!',
+        victoryTag: '¡Ha conquistado el Gran Jardín de la Oca en la casilla 63!',
+        btnRestart: '🔄 Jugar Otra Partida',
+        btnBackLobby: '🏠 Volver al Menú Principal',
+        rulesModalTitle: '📜 Reglas de El Juego de la Oca',
+        rulesObjectiveTitle: '🎯 Objetivo',
+        rulesObjectiveText: 'Ser el primer jugador en llegar con la <strong>tirada exacta</strong> a la casilla 63: <em>El Gran Jardín de la Oca</em>.',
+        rulesSpecialTitle: '🦆 Las Casillas Especiales',
+        ruleOcaTitle: 'Las Ocas (5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59):',
+        ruleOcaText: '«De oca a oca y tiro porque me toca». Saltas a la siguiente oca y vuelves a tirar inmediatamente.',
+        ruleBridgeTitle: 'El Puente (6 y 12):',
+        ruleBridgeText: '«De puente a puente y tiro porque me lleva la corriente». Saltas al otro puente y tiras de nuevo.',
+        ruleDiceTitle: 'Los Dados (26 y 53):',
+        ruleDiceText: '«De dados a dados y tiro porque me ha tocado». Saltas entre ambas y repites tiro.',
+        ruleInnTitle: 'La Posada (19):',
+        ruleInnText: 'Cansado del viaje, descansas y <strong>pierdes 1 turno</strong>.',
+        ruleWellTitle: 'El Pozo (31):',
+        ruleWellText: 'Quedas atrapado hasta que otro jugador caiga en él para rescatarte (intercambian lugares) o tras pasar 3 turnos.',
+        ruleMazeTitle: 'El Laberinto (42):',
+        ruleMazeText: '«Del laberinto al 30». Te desorientas y retrocedes a la casilla 30.',
+        rulePrisonTitle: 'La Cárcel (52):',
+        rulePrisonText: 'Quedas encerrado y <strong>pierdes 2 turnos</strong>.',
+        ruleDeathTitle: 'La Muerte (58):',
+        ruleDeathText: '¡El peor castigo! Vuelves al inicio: <strong>casilla 1</strong>.',
+        rulesNineTitle: '🎲 Regla Especial del 9 Inicial',
+        rulesNineDesc: 'Al iniciar la partida (desde la casilla 0):',
+        rulesNine54: 'Si sacas 9 con <strong>5 y 4</strong>: Vuelas directo a la <strong>casilla 53</strong> y vuelves a tirar.',
+        rulesNine63: 'Si sacas 9 con <strong>6 y 3</strong>: Vuelas directo a la <strong>casilla 26</strong> y vuelves a tirar.',
+        rulesReboundTitle: '↩️ Rebote en la Casilla 63',
+        rulesReboundText: 'Debes entrar a la casilla 63 con el número exacto. Si te sobran puntos, <strong>rebotas hacia atrás</strong>. Si al rebotar caes en la Muerte o una Oca, ¡se activa su efecto!',
+        btnGotRules: '¡Entendido, a jugar!'
+    },
+    en: {
+        logoTitle: 'THE GAME OF THE GOOSE',
+        logoSubtitle: 'From goose to goose, roll again! 🎲',
+        btnLang: '🌐 ES',
+        rulesTitle: 'Game Rules',
+        soundTitle: 'Toggle Sound',
+        leaveTitle: 'Leave Room',
+        heroTitle: 'Welcome to the Great Game of the Goose!',
+        heroDesc: 'The traditional 63-space spiral board game featuring the bridge, inn, well, labyrinth, dice, prison, and dreaded death.',
+        playerNameLabel: 'Your Name or Nickname:',
+        playerNamePh: 'Enter your name or nickname...',
+        chooseAvatarLabel: 'Choose your Token & Mascot:',
+        chooseColorLabel: 'Choose your Traditional Color:',
+        tabCreate: '✨ Create Room',
+        tabJoin: '🔗 Join Room',
+        tabLocal: '🤖 Solo / Local',
+        turnTimerLabel: '⏱️ Turn Timer (AFK):',
+        timer20: '⏱️ 20 seconds (Recommended)',
+        timer15: '⏱️ 15 seconds (Fast)',
+        timer30: '⏱️ 30 seconds (Relaxed)',
+        timer0: '♾️ No limit (Manual)',
+        twoDiceRule: 'Play with 2 classic dice (includes initial 9 rule)',
+        btnCreateRoom: 'Create Multiplayer Room 🚀',
+        joinCodePh: 'ROOM CODE (e.g. OC25)',
+        btnJoinRoom: 'Join',
+        tabNote: 'Play immediately against computer-controlled players (smart Bots).',
+        btnQuickSolo: 'Start Solo Game vs Bots! 🤖',
+        badgeWaiting: 'WAITING ROOM',
+        roomCodeLabel: 'Room Code:',
+        btnCopy: '📋 Copy',
+        qrHint: 'Scan the QR code with your phone to join',
+        playersInRoom: 'Players in Room',
+        btnAddBot: '+ Add Bot 🤖',
+        btnStartGame: 'Start Game Now! 🏁',
+        guestWaitMsg: 'Waiting for the host to start the game...',
+        turnLabel: 'CURRENT TURN',
+        turnStatusWaiting: 'Waiting for roll...',
+        turnStatusYourTurn: 'Your turn! Roll the dice 🎲',
+        turnStatusRolling: 'Rolling dice...',
+        radarStart: '🏁 Start',
+        radarGoal: 'Goal 63 🏆',
+        camFollow: 'Follow',
+        camOverview: 'Overview',
+        diceRollTitle: 'Dice Roll',
+        diceTotalLabel: 'Total:',
+        btnRollDice: '🎲 ROLL DICE! 🎲',
+        btnRollingDice: '🎲 Rolling...',
+        standingsTitle: 'Standings',
+        tabLog: '📜 Chronicle',
+        tabChat: '💬 Chat & Cheer',
+        chatInputPh: 'Type a message...',
+        chatSendBtn: 'Send',
+        victoryHeadline: 'WE HAVE A CHAMPION!',
+        victoryTag: 'Has conquered the Great Garden of the Goose at space 63!',
+        btnRestart: '🔄 Play Again',
+        btnBackLobby: '🏠 Return to Main Menu',
+        rulesModalTitle: '📜 Game of the Goose Rules',
+        rulesObjectiveTitle: '🎯 Objective',
+        rulesObjectiveText: 'Be the first player to land with an <strong>exact roll</strong> on space 63: <em>The Great Garden of the Goose</em>.',
+        rulesSpecialTitle: '🦆 Special Spaces',
+        ruleOcaTitle: 'The Geese (5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59):',
+        ruleOcaText: '«From goose to goose, roll again!». Leap forward to the next goose and roll again immediately.',
+        ruleBridgeTitle: 'The Bridge (6 and 12):',
+        ruleBridgeText: '«From bridge to bridge, carried by the current!». Leap to the other bridge and roll again.',
+        ruleDiceTitle: 'The Dice (26 and 53):',
+        ruleDiceText: '«From dice to dice, roll again!». Leap between them and roll again.',
+        ruleInnTitle: 'The Inn (19):',
+        ruleInnText: 'Tired from the journey, rest and <strong>skip 1 turn</strong>.',
+        ruleWellTitle: 'The Well (31):',
+        ruleWellText: 'Trapped in the well until another player falls in to rescue you (swapping spots) or after 3 turns.',
+        ruleMazeTitle: 'The Labyrinth (42):',
+        ruleMazeText: '«From the maze back to 30». Lost in the labyrinth, retreat to space 30.',
+        rulePrisonTitle: 'The Prison (52):',
+        rulePrisonText: 'Locked behind bars: <strong>skip 2 turns</strong>.',
+        ruleDeathTitle: 'Death (58):',
+        ruleDeathText: 'The ultimate penalty! Return back to the start: <strong>space 1</strong>.',
+        rulesNineTitle: '🎲 Initial 9 Special Rule',
+        rulesNineDesc: 'When starting from space 0 with a total roll of 9:',
+        rulesNine54: 'If you roll 9 with <strong>5 and 4</strong>: Fly straight to <strong>space 53</strong> and roll again.',
+        rulesNine63: 'If you roll 9 with <strong>6 and 3</strong>: Fly straight to <strong>space 26</strong> and roll again.',
+        rulesReboundTitle: '↩️ Bouncing off Space 63',
+        rulesReboundText: 'You must reach space 63 by exact count. Any excess points <strong>bounce backwards</strong>. If you land on Death or a Goose while bouncing, its effect triggers!',
+        btnGotRules: 'Got it, let\'s play!'
+    }
+};
+
 class OcaGameApp {
     constructor() {
         this.ws = null;
@@ -13,6 +184,9 @@ class OcaGameApp {
         this.isHost = false;
         this.isAnimating = false;
         this.playerPositions = {};
+
+        // Language (i18n)
+        this.currentLang = localStorage.getItem('oca_lang') || 'es';
 
         // Customization
         this.selectedAvatar = '🪿';
@@ -56,6 +230,7 @@ class OcaGameApp {
         this.setupEventListeners();
         this.setupCameraGestures();
         this.setupConfetti();
+        this.setLanguage(this.currentLang);
         await this.loadBoardData();
         this.renderMontecarloBoard();
 
@@ -81,6 +256,53 @@ class OcaGameApp {
         if (c2) this.markDiceSettled(c2, 1);
 
         this.connectWebSocket();
+    }
+
+    setLanguage(lang) {
+        this.currentLang = (lang === 'en') ? 'en' : 'es';
+        localStorage.setItem('oca_lang', this.currentLang);
+
+        if (window.ocaAudio && typeof window.ocaAudio.setLanguage === 'function') {
+            window.ocaAudio.setLanguage(this.currentLang);
+        }
+
+        const dict = I18N[this.currentLang] || I18N.es;
+
+        // Update btn-lang label
+        const btnLang = document.getElementById('btn-lang');
+        if (btnLang) {
+            btnLang.textContent = dict.btnLang || (this.currentLang === 'es' ? '🌐 EN' : '🌐 ES');
+        }
+
+        // Translate text elements [data-i18n]
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (dict[key]) {
+                el.innerHTML = dict[key];
+            }
+        });
+
+        // Translate placeholders [data-i18n-ph]
+        document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+            const key = el.getAttribute('data-i18n-ph');
+            if (dict[key]) {
+                el.setAttribute('placeholder', dict[key]);
+            }
+        });
+
+        // Translate title attributes [data-i18n-title]
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            if (dict[key]) {
+                el.setAttribute('title', dict[key]);
+            }
+        });
+
+        // Update dynamic button texts
+        this.updateCameraPillText();
+        if (this.room) {
+            this.updateRoomStateUI();
+        }
     }
 
     // ========================================================
@@ -836,14 +1058,14 @@ class OcaGameApp {
 
         if (this.camera.isZoomed) {
             pill.classList.add('active');
-            text.textContent = 'Ver Todo';
+            text.textContent = this.currentLang === 'en' ? 'Overview' : 'Ver Todo';
             if (icon) icon.textContent = '🗺️';
-            pill.title = 'Cambiar a Vista Completa del Tablero';
+            pill.title = this.currentLang === 'en' ? 'Switch to Full Board Overview' : 'Cambiar a Vista Completa del Tablero';
         } else {
             pill.classList.remove('active');
-            text.textContent = 'Seguir';
+            text.textContent = this.currentLang === 'en' ? 'Follow' : 'Seguir';
             if (icon) icon.textContent = '🎯';
-            pill.title = 'Seguir la ficha en primer plano';
+            pill.title = this.currentLang === 'en' ? 'Follow moving token close-up' : 'Seguir la ficha en primer plano';
         }
     }
 
@@ -977,6 +1199,85 @@ class OcaGameApp {
         }, duration);
     }
 
+    setLanguage(lang) {
+        if (!I18N[lang]) lang = 'es';
+        this.currentLang = lang;
+        try {
+            localStorage.setItem('oca_lang', lang);
+        } catch (e) {}
+
+        const dict = I18N[lang];
+
+        // 1. Update text nodes with data-i18n
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (dict[key]) {
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                    el.value = dict[key];
+                } else {
+                    el.innerHTML = dict[key];
+                }
+            }
+        });
+
+        // 2. Update placeholder attributes with data-i18n-ph
+        document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+            const key = el.getAttribute('data-i18n-ph');
+            if (dict[key]) {
+                el.placeholder = dict[key];
+            }
+        });
+
+        // 3. Update title attributes with data-i18n-title
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            if (dict[key]) {
+                el.title = dict[key];
+            }
+        });
+
+        // 4. Update language toggle button text
+        const langBtn = document.getElementById('btn-lang');
+        if (langBtn) {
+            langBtn.textContent = dict.btnLang || (lang === 'es' ? '🌐 EN' : '🌐 ES');
+        }
+
+        // 5. Update WebAudio speech synthesis language
+        if (window.ocaAudio && typeof window.ocaAudio.setLanguage === 'function') {
+            window.ocaAudio.setLanguage(lang);
+        }
+
+        // 6. Camera toggle button text
+        const camBtn = document.getElementById('cam-mode-text');
+        if (camBtn) {
+            camBtn.textContent = this.followAction ? dict.camFollow : dict.camOverview;
+        }
+
+        // 7. Update turn status badge if present
+        const turnBadge = document.getElementById('turn-status-badge');
+        if (turnBadge && !this.isAnimating) {
+            if (this.room && this.room.players && this.room.players[this.room.current_turn]) {
+                const cur = this.room.players[this.room.current_turn];
+                if (cur.id === this.myId) {
+                    turnBadge.textContent = dict.turnStatusYourTurn;
+                } else {
+                    turnBadge.textContent = dict.turnStatusWaiting;
+                }
+            }
+        }
+
+        // 8. Update timer button display if present
+        if (typeof this.updateTurnTimerDisplay === 'function') {
+            this.updateTurnTimerDisplay();
+        }
+    }
+
+    toggleLanguage() {
+        const next = this.currentLang === 'es' ? 'en' : 'es';
+        this.setLanguage(next);
+        this.showToast(next === 'es' ? '🌐 Idioma: Español' : '🌐 Language: English');
+    }
+
     updateTurnTimerDisplay() {
         const timerBtn = document.getElementById('btn-turn-timer');
         if (!timerBtn || !this.room) return;
@@ -988,11 +1289,11 @@ class OcaGameApp {
 
         const timerSecs = this.room.settings?.turn_timer_seconds ?? 20;
         if (timerSecs <= 0) {
-            timerBtn.textContent = '♾️ Sin límite';
+            timerBtn.textContent = this.currentLang === 'en' ? '♾️ No limit' : '♾️ Sin límite';
             timerBtn.classList.remove('timer-urgent');
             timerBtn.title = this.isHost
-                ? 'Modo sin límite de tiempo. Clic para activar 15s.'
-                : 'Partida sin límite de tiempo por turno.';
+                ? (this.currentLang === 'en' ? 'No turn time limit. Click to toggle 15s.' : 'Modo sin límite de tiempo. Clic para activar 15s.')
+                : (this.currentLang === 'en' ? 'Game without turn timer.' : 'Partida sin límite de tiempo por turno.');
             return;
         }
 
@@ -1032,7 +1333,7 @@ class OcaGameApp {
             // Auto-reconnect if session exists
             const session = this.getStoredSession();
             if (session && session.roomCode && session.playerId) {
-                this.showToast(`🔄 Reconectando a la sala ${session.roomCode}...`);
+                this.showToast(this.currentLang === 'en' ? `🔄 Reconnecting to room ${session.roomCode}...` : `🔄 Reconectando a la sala ${session.roomCode}...`);
                 this.send({
                     action: 'join_room',
                     room_code: session.roomCode,
@@ -1087,7 +1388,7 @@ class OcaGameApp {
                     this.showGameView();
                     this.updateRoomStateUI();
                     if (data.is_reconnect) {
-                        this.showToast('✅ ¡Reconectado a la partida!');
+                        this.showToast(this.currentLang === 'en' ? '✅ Reconnected to the game!' : '✅ ¡Reconectado a la partida!');
                     }
                 } else {
                     this.showWaitingLobby();
@@ -1119,7 +1420,9 @@ class OcaGameApp {
                 }
                 if (data.event) {
                     if (data.was_timeout) {
-                        this.showToast(`⏱️ Tiempo agotado (20s): se tiró automáticamente para ${data.event.player_name}`);
+                        this.showToast(this.currentLang === 'en'
+                            ? `⏱️ Time up: auto-rolled for ${data.event.player_name}`
+                            : `⏱️ Tiempo agotado (20s): se tiró automáticamente para ${data.event.player_name}`);
                     }
                     this.enqueueTurnEvent(data.event);
                 }
@@ -1208,6 +1511,7 @@ class OcaGameApp {
         // Token hops step by step sequentially along path
         // Camera slowly and steadily tracks the chip on each step in a continuous flow
         const hopStepTime = 240; // ms per hop
+        const playerIdx = this.room?.players ? this.room.players.findIndex(p => p.id === event.player_id) : 0;
         if (path.length > 0) {
             for (let i = 0; i < path.length; i++) {
                 const stepPos = path[i];
@@ -1215,7 +1519,7 @@ class OcaGameApp {
                 this.moveTokenTo(event.player_id, stepPos);
                 this.highlightCard(stepPos);
 
-                if (window.ocaAudio) window.ocaAudio.playStep();
+                if (window.ocaAudio) window.ocaAudio.playStep(playerIdx >= 0 ? playerIdx : 0, event.player_id);
 
                 if (this.followAction && this.camera.isZoomed) {
                     this.trackStepWithCamera(stepPos, 0.24);
@@ -1251,17 +1555,34 @@ class OcaGameApp {
             switch (event.tile_type) {
                 case 'oca':
                     window.ocaAudio.playGooseHonk();
+                    window.ocaAudio.speak("¡De oca a oca y tiro porque me toca!", "From goose to goose, roll again!");
                     break;
                 case 'puente':
                     window.ocaAudio.playBridge();
+                    window.ocaAudio.speak("¡De puente a puente y tiro porque me lleva la corriente!", "From bridge to bridge, carried by the current, roll again!");
+                    break;
+                case 'dados':
+                    window.ocaAudio.speak("¡De dados a dados y tiro porque me ha tocado!", "From dice to dice, roll again!");
                     break;
                 case 'posada':
+                    window.ocaAudio.playTrap();
+                    window.ocaAudio.speak("¡La posada! Descansas un turno.", "The inn! Rest and skip one turn.");
+                    break;
                 case 'pozo':
+                    window.ocaAudio.playTrap();
+                    window.ocaAudio.speak("¡Caíste al pozo! Atrapado hasta ser rescatado.", "Fell into the well! Trapped until rescued.");
+                    break;
                 case 'carcel':
                     window.ocaAudio.playTrap();
+                    window.ocaAudio.speak("¡A la cárcel! Dos turnos sin tirar.", "To prison! Skip two turns behind bars.");
+                    break;
+                case 'laberinto':
+                    window.ocaAudio.playTrap();
+                    window.ocaAudio.speak("¡El laberinto! Retrocedes a la casilla 30.", "The labyrinth! Lost, back to space 30.");
                     break;
                 case 'muerte':
                     window.ocaAudio.playDeath();
+                    window.ocaAudio.speak("¡La muerte! Vuelves al inicio.", "Death! Back to space one.");
                     break;
                 case 'meta':
                     window.ocaAudio.playVictory();
@@ -1277,6 +1598,13 @@ class OcaGameApp {
         if (event.is_win) {
             this.showVictoryModal(event.player_name);
             this.startConfetti();
+            if (window.ocaAudio) {
+                window.ocaAudio.playVictory();
+                window.ocaAudio.speak(
+                    `¡Victoria! ¡${event.player_name} ha ganado el Gran Juego de la Oca!`,
+                    `Victory! ${event.player_name} has won the Great Game of the Goose!`
+                );
+            }
         }
 
         // Pause to let the user admire the landed card and read the rhyme!
@@ -1387,34 +1715,42 @@ class OcaGameApp {
         const text = document.getElementById('rhyme-text');
 
         let icon = '🦆';
-        let headline = '¡De oca a oca!';
+        let headline = (this.currentLang === 'en') ? 'From goose to goose!' : '¡De oca a oca!';
+        let subtitle = (this.currentLang === 'en') ? "And roll again because it's your turn!" : rhymeText;
 
         if (tileType === 'puente') {
             icon = '🌉';
-            headline = '¡De puente a puente!';
+            headline = (this.currentLang === 'en') ? 'From bridge to bridge!' : '¡De puente a puente!';
+            if (this.currentLang === 'en') subtitle = 'Carried by the current, roll again!';
         } else if (tileType === 'dados') {
             icon = '🎲';
-            headline = '¡De dados a dados!';
+            headline = (this.currentLang === 'en') ? 'From dice to dice!' : '¡De dados a dados!';
+            if (this.currentLang === 'en') subtitle = 'Roll again!';
         } else if (tileType === 'laberinto') {
             icon = '🌀';
-            headline = '¡Del laberinto al 30!';
+            headline = (this.currentLang === 'en') ? 'Lost in the Maze!' : '¡Del laberinto al 30!';
+            if (this.currentLang === 'en') subtitle = 'Lost in the labyrinth, back to space 30!';
         } else if (tileType === 'muerte') {
             icon = '💀';
-            headline = '¡La Muerte!';
+            headline = (this.currentLang === 'en') ? 'Death!' : '¡La Muerte!';
+            if (this.currentLang === 'en') subtitle = 'Back to space 1!';
         } else if (tileType === 'pozo') {
             icon = '🕳️';
-            headline = '¡Caíste en el Pozo!';
+            headline = (this.currentLang === 'en') ? 'Fell into the Well!' : '¡Caíste en el Pozo!';
+            if (this.currentLang === 'en') subtitle = 'Trapped until rescued!';
         } else if (tileType === 'carcel') {
             icon = '⛓️';
-            headline = '¡A la Cárcel!';
+            headline = (this.currentLang === 'en') ? 'To Prison!' : '¡A la Cárcel!';
+            if (this.currentLang === 'en') subtitle = 'Skip 2 turns behind bars!';
         } else if (tileType === 'posada') {
             icon = '🏨';
-            headline = '¡La Posada!';
+            headline = (this.currentLang === 'en') ? 'The Inn!' : '¡La Posada!';
+            if (this.currentLang === 'en') subtitle = 'Rest and skip 1 turn!';
         }
 
         badge.textContent = icon;
         title.textContent = headline;
-        text.textContent = rhymeText;
+        text.textContent = subtitle;
 
         banner.classList.remove('hidden');
 
@@ -1486,12 +1822,14 @@ class OcaGameApp {
             li.style.borderLeftColor = p.color;
 
             const isHostP = (p.id === this.room.host_id);
+            const hostLabel = this.currentLang === 'en' ? 'HOST' : 'ANFITRIÓN';
+            const botLabel = this.currentLang === 'en' ? 'AI BOT' : 'BOT IA';
             li.innerHTML = `
                 <div class="waiting-player-info">
                     <span class="waiting-player-avatar">${p.avatar}</span>
                     <span class="waiting-player-name">${p.name}</span>
-                    ${isHostP ? '<span class="host-tag">ANFITRIÓN</span>' : ''}
-                    ${p.is_bot ? '<span class="bot-tag">BOT IA</span>' : ''}
+                    ${isHostP ? `<span class="host-tag">${hostLabel}</span>` : ''}
+                    ${p.is_bot ? `<span class="bot-tag">${botLabel}</span>` : ''}
                 </div>
             `;
             list.appendChild(li);
@@ -1528,9 +1866,13 @@ class OcaGameApp {
 
             const statusBadge = document.getElementById('turn-status-badge');
             if (currPlayer.turns_to_wait > 0) {
-                statusBadge.textContent = `Castigo (${currPlayer.turns_to_wait} turnos)`;
+                statusBadge.textContent = this.currentLang === 'en'
+                    ? `Penalty (${currPlayer.turns_to_wait} turns)`
+                    : `Castigo (${currPlayer.turns_to_wait} turnos)`;
             } else {
-                statusBadge.textContent = 'En turno para tirar';
+                statusBadge.textContent = this.currentLang === 'en'
+                    ? 'Turn to roll'
+                    : 'En turno para tirar';
             }
         }
 
@@ -1547,15 +1889,16 @@ class OcaGameApp {
                 item.style.cursor = 'pointer';
 
                 let trapTag = '';
-                if (p.in_well) trapTag = '<span class="game-player-trap">🕳️ En el Pozo</span>';
-                else if (p.position === 19 && p.turns_to_wait > 0) trapTag = '<span class="game-player-trap">🏨 Posada</span>';
-                else if (p.position === 52 && p.turns_to_wait > 0) trapTag = '<span class="game-player-trap">⛓️ Cárcel</span>';
+                if (p.in_well) trapTag = `<span class="game-player-trap">${this.currentLang === 'en' ? '🕳️ In Well' : '🕳️ En el Pozo'}</span>`;
+                else if (p.position === 19 && p.turns_to_wait > 0) trapTag = `<span class="game-player-trap">${this.currentLang === 'en' ? '🏨 The Inn' : '🏨 Posada'}</span>`;
+                else if (p.position === 52 && p.turns_to_wait > 0) trapTag = `<span class="game-player-trap">${this.currentLang === 'en' ? '⛓️ Prison' : '⛓️ Cárcel'}</span>`;
 
+                const posLabel = this.currentLang === 'en' ? `Space ${p.position}` : `Casilla ${p.position}`;
                 item.innerHTML = `
                     <span class="game-player-avatar">${p.avatar}</span>
                     <span class="game-player-name">${p.name}</span>
                     ${trapTag}
-                    <span class="game-player-pos">Casilla ${p.position}</span>
+                    <span class="game-player-pos">${posLabel}</span>
                 `;
 
                 item.addEventListener('click', () => {
@@ -1648,7 +1991,7 @@ class OcaGameApp {
                 input.focus();
                 setTimeout(() => input.classList.remove('input-shake-error'), 500);
             }
-            this.showToast('⚠️ Por favor escribe tu nombre o apodo antes de continuar');
+            this.showToast(this.currentLang === 'en' ? '⚠️ Please enter your name or nickname before continuing' : '⚠️ Por favor escribe tu nombre o apodo antes de continuar');
             return null;
         }
         return name;
@@ -1713,7 +2056,7 @@ class OcaGameApp {
             const codeInput = document.getElementById('join-code-input');
             const code = codeInput.value.trim().toUpperCase();
             if (!code) {
-                this.showToast('⚠️ Introduce el código de la sala');
+                this.showToast(this.currentLang === 'en' ? '⚠️ Please enter the room code' : '⚠️ Introduce el código de la sala');
                 codeInput.focus();
                 return;
             }
@@ -1762,7 +2105,7 @@ class OcaGameApp {
         if (timerBtn) {
             timerBtn.addEventListener('click', () => {
                 if (!this.isHost) {
-                    this.showToast('ℹ️ Solo el anfitrión puede alternar el temporizador.');
+                    this.showToast(this.currentLang === 'en' ? 'ℹ️ Only the host can toggle the timer.' : 'ℹ️ Solo el anfitrión puede alternar el temporizador.');
                     return;
                 }
                 this.send({ action: 'toggle_timer' });
@@ -1783,10 +2126,10 @@ class OcaGameApp {
             if (!this.room) return;
             const url = `${window.location.origin}${window.location.pathname}?room=${this.room.code}`;
             navigator.clipboard.writeText(url).then(() => {
-                this.showToast('📋 ¡Enlace de sala copiado al portapapeles!');
+                this.showToast(this.currentLang === 'en' ? '📋 Room link copied to clipboard!' : '📋 ¡Enlace de sala copiado al portapapeles!');
             }).catch(() => {
                 navigator.clipboard.writeText(this.room.code);
-                this.showToast(`📋 ¡Código ${this.room.code} copiado!`);
+                this.showToast(this.currentLang === 'en' ? `📋 Room code ${this.room.code} copied!` : `📋 ¡Código ${this.room.code} copiado!`);
             });
         });
 
@@ -1810,6 +2153,14 @@ class OcaGameApp {
             }
         });
 
+        const btnLang = document.getElementById('btn-lang');
+        if (btnLang) {
+            btnLang.addEventListener('click', () => {
+                const nextLang = this.currentLang === 'es' ? 'en' : 'es';
+                this.setLanguage(nextLang);
+            });
+        }
+
         document.getElementById('btn-sound').addEventListener('click', (e) => {
             if (window.ocaAudio) {
                 this.soundEnabled = window.ocaAudio.toggleMute();
@@ -1828,7 +2179,8 @@ class OcaGameApp {
         });
 
         document.getElementById('btn-leave').addEventListener('click', () => {
-            if (confirm('¿Deseas salir de la sala actual?')) {
+            const confirmMsg = this.currentLang === 'en' ? 'Do you want to leave the current room?' : '¿Deseas salir de la sala actual?';
+            if (confirm(confirmMsg)) {
                 this.clearSession();
                 window.location.href = window.location.pathname;
             }

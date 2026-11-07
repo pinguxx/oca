@@ -139,6 +139,24 @@ body {
   transform: translateY(-1px);
 }
 
+.btn-lang-toggle {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  width: auto;
+  min-width: 50px;
+  padding: 0 10px;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--color-gold);
+}
+
+.btn-lang-toggle:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--color-gold);
+}
+
 /* ========================================================
    RHYME NOTIFICATION BANNER
    ======================================================== */
@@ -672,6 +690,46 @@ body {
 }
 
 @media (max-width: 768px) {
+  /* Compact Mobile Header - saves vertical space so the board fits high & clear */
+  .app-header {
+    padding: 6px 12px;
+    min-height: 42px;
+  }
+
+  .logo-box {
+    gap: 8px;
+  }
+
+  .logo-icon {
+    font-size: 1.4rem;
+  }
+
+  .logo-title {
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+  }
+
+  .logo-subtitle {
+    display: none; /* Hide subtitle on phones for a sleek single-line header */
+  }
+
+  .header-controls {
+    gap: 6px;
+  }
+
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+    border-radius: 8px;
+  }
+
+  .btn-lang-toggle {
+    min-width: 40px;
+    padding: 0 6px;
+    font-size: 0.72rem;
+  }
+
   .view-panel {
     padding: 8px 10px;
   }
@@ -801,6 +859,32 @@ body {
 
   .players-card, .log-card {
     padding: 12px;
+  }
+
+  /* Sleek & Non-Intrusive Rhyme Toast on Mobile */
+  .rhyme-banner {
+    top: 8px !important;
+    width: 92% !important;
+    max-width: 360px !important;
+    padding: 8px 12px !important;
+    border-radius: 12px !important;
+    gap: 10px !important;
+  }
+  .rhyme-badge {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    font-size: 1.4rem !important;
+  }
+  .rhyme-title {
+    font-size: 0.92rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .rhyme-text {
+    font-size: 0.76rem !important;
+    line-height: 1.25 !important;
   }
 }
 

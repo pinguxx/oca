@@ -103,28 +103,138 @@ class OcaAudio {
         }
     }
 
-    // Sonido al avanzar casilla por casilla (pop alegre)
-    playStep() {
+    // Sonido al avanzar casilla por casilla con timbre e instrumento distintivo por jugador
+    playStep(playerIdx = 0, playerId = null) {
         if (!this.enabled) return;
         this.init();
         if (!this.ctx) return;
+
+        // Si playerIdx no es número válido o negativo, derivar índice determinista desde playerId
+        let idx = typeof playerIdx === 'number' && playerIdx >= 0 ? playerIdx : 0;
+        if ((idx === 0 && playerId) || isNaN(idx)) {
+            let hash = 0;
+            const str = String(playerId);
+            for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) & 0xffffffff;
+            idx = Math.abs(hash);
+        }
+        const profileIdx = idx % 8;
 
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(420, now);
-        osc.frequency.exponentialRampToValueAtTime(780, now + 0.07);
+        // 8 perfiles acústicos únicos y armoniosos inspirados en instrumentos tradicionales
+        switch (profileIdx) {
+            case 0: { // 🔴 Marimba Tradicional: Sine cálido C5 -> G5
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(660, now + 0.065);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.07);
+                break;
+            }
+            case 1: { // ⚫ Cajón / Bongó: Triangle percusivo grave A3 -> D3
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(130, now + 0.06);
+                gain.gain.setValueAtTime(0.24, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.07);
+                break;
+            }
+            case 2: { // 🔵 Xilófono Cristalino: Sine brillante D5 -> A5
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.065);
+                gain.gain.setValueAtTime(0.16, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.07);
+                break;
+            }
+            case 3: { // 🟢 Glockenspiel / Campanilla: Triangle agudo G5 -> C6
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(784, now);
+                osc.frequency.exponentialRampToValueAtTime(1046, now + 0.07);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.075);
+                break;
+            }
+            case 4: { // 🟠 Clave de Madera: Triangle filtrado con toque seco
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1150, now);
+                filter.Q.setValueAtTime(4.0, now);
 
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(520, now);
+                osc.frequency.exponentialRampToValueAtTime(320, now + 0.05);
+                gain.gain.setValueAtTime(0.28, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
 
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.055);
+                break;
+            }
+            case 5: { // 🟣 Ocarina / Chiflidito: Sine suave y alegre C5 -> B5
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523, now);
+                osc.frequency.exponentialRampToValueAtTime(988, now + 0.07);
+                gain.gain.setValueAtTime(0.17, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.075);
+                break;
+            }
+            case 6: { // 🌸 Jarana Punteada: Sawtooth con filtro cálido G4 -> D5
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(920, now);
 
-        osc.start(now);
-        osc.stop(now + 0.08);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(392, now);
+                osc.frequency.exponentialRampToValueAtTime(587, now + 0.065);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.07);
+                break;
+            }
+            default: { // 🟡 Kalimba Resonante: Sine dulce E5 -> G5
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(659, now);
+                osc.frequency.exponentialRampToValueAtTime(784, now + 0.07);
+                gain.gain.setValueAtTime(0.17, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.075);
+                break;
+            }
+        }
     }
 
     // Graznido de Oca característico ("¡HONK! / ¡CUAK!")

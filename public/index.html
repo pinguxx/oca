@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2.4">
+  <link rel="stylesheet" href="style.css?v=2.5">
 </head>
 <body>
 
@@ -35,15 +35,16 @@
     <div class="logo-box">
       <span class="logo-icon">🦆</span>
       <div class="logo-info">
-        <h1 class="logo-title">EL JUEGO DE LA OCA</h1>
-        <span class="logo-subtitle">¡De oca a oca y tiro porque me toca! 🎲</span>
+        <h1 class="logo-title" data-i18n="logoTitle">EL JUEGO DE LA OCA</h1>
+        <span class="logo-subtitle" data-i18n="logoSubtitle">¡De oca a oca y tiro porque me toca! 🎲</span>
       </div>
     </div>
 
     <div class="header-controls">
-      <button id="btn-rules" class="btn-icon" title="Reglas del Juego" aria-label="Ver Reglas">📜</button>
-      <button id="btn-sound" class="btn-icon" title="Sonido" aria-label="Alternar Sonido">🔊</button>
-      <button id="btn-leave" class="btn-icon hidden" title="Salir de la Sala" aria-label="Salir">🚪</button>
+      <button id="btn-lang" class="btn-icon btn-lang-toggle" title="Change Language / Cambiar Idioma" aria-label="Cambiar Idioma">🌐 EN</button>
+      <button id="btn-rules" class="btn-icon" title="Reglas del Juego" aria-label="Ver Reglas" data-i18n-title="rulesTitle">📜</button>
+      <button id="btn-sound" class="btn-icon" title="Sonido" aria-label="Alternar Sonido" data-i18n-title="soundTitle">🔊</button>
+      <button id="btn-leave" class="btn-icon hidden" title="Salir de la Sala" aria-label="Salir" data-i18n-title="leaveTitle">🚪</button>
     </div>
   </header>
 
@@ -57,18 +58,18 @@
       <div class="lobby-card">
         <div class="hero-banner">
           <div class="hero-goose">🪿</div>
-          <h2 class="hero-title">¡Bienvenido al Gran Juego de la Oca!</h2>
-          <p class="hero-desc">
+          <h2 class="hero-title" data-i18n="heroTitle">¡Bienvenido al Gran Juego de la Oca!</h2>
+          <p class="hero-desc" data-i18n="heroDesc">
             El tradicional juego de mesa de 63 casillas en espiral con sus puentes, posada, laberinto, dados, cárcel y la temida muerte.
           </p>
         </div>
 
         <!-- Player Customization -->
         <div class="form-section">
-          <label class="form-label" for="player-name-input">Tu Nombre o Apodo:</label>
-          <input type="text" id="player-name-input" class="text-input" placeholder="Escribe tu nombre o apodo..." maxlength="18" autocomplete="off" required>
+          <label class="form-label" for="player-name-input" data-i18n="playerNameLabel">Tu Nombre o Apodo:</label>
+          <input type="text" id="player-name-input" class="text-input" placeholder="Escribe tu nombre o apodo..." data-i18n-ph="playerNamePh" maxlength="18" autocomplete="off" required>
 
-          <label class="form-label">Elige tu Ficha y Mascota:</label>
+          <label class="form-label" data-i18n="chooseAvatarLabel">Elige tu Ficha y Mascota:</label>
           <div class="avatar-selector" id="avatar-selector">
             <button class="avatar-opt active" data-avatar="🪿" title="Ganso Tradicional">🪿</button>
             <button class="avatar-opt" data-avatar="🦆" title="Pato Silvestre">🦆</button>
@@ -80,7 +81,7 @@
             <button class="avatar-opt" data-avatar="🌶️" title="Chile Jalapeño">🌶️</button>
           </div>
 
-          <label class="form-label">Elige tu Color Tradicional:</label>
+          <label class="form-label" data-i18n="chooseColorLabel">Elige tu Color Tradicional:</label>
           <div class="color-selector" id="color-selector">
             <button class="color-opt active" data-color="#e63946" style="background: #e63946;" title="Rojo Caramelo"></button>
             <button class="color-opt color-black" data-color="#1a1a1a" style="background: #1a1a1a;" title="Negro Azabache"></button>
@@ -95,29 +96,29 @@
 
         <!-- Mode Tabs -->
         <div class="mode-tabs">
-          <button class="tab-btn active" id="tab-create" data-target="panel-create">✨ Crear Sala</button>
-          <button class="tab-btn" id="tab-join" data-target="panel-join">🔗 Unirse a Sala</button>
-          <button class="tab-btn" id="tab-local" data-target="panel-local">🤖 Solitario / Local</button>
+          <button class="tab-btn active" id="tab-create" data-target="panel-create" data-i18n="tabCreate">✨ Crear Sala</button>
+          <button class="tab-btn" id="tab-join" data-target="panel-join" data-i18n="tabJoin">🔗 Unirse a Sala</button>
+          <button class="tab-btn" id="tab-local" data-target="panel-local" data-i18n="tabLocal">🤖 Solitario / Local</button>
         </div>
 
         <!-- Tab Panel: Crear Sala -->
         <div class="tab-content active" id="panel-create">
           <div class="rules-toggle-row">
-            <label class="form-label" for="sel-turn-timer" style="margin-bottom: 4px; font-weight: 700;">⏱️ Tiempo por Turno (AFK):</label>
+            <label class="form-label" for="sel-turn-timer" style="margin-bottom: 4px; font-weight: 700;" data-i18n="turnTimerLabel">⏱️ Tiempo por Turno (AFK):</label>
             <select id="sel-turn-timer" class="text-input" style="padding: 9px 12px; margin-bottom: 12px; font-weight: 600;">
-              <option value="20" selected>⏱️ 20 segundos (Recomendado)</option>
-              <option value="15">⏱️ 15 segundos (Rápido)</option>
-              <option value="30">⏱️ 30 segundos (Tranquilo)</option>
-              <option value="0">♾️ Sin límite (Manual)</option>
+              <option value="20" selected data-i18n="timer20">⏱️ 20 segundos (Recomendado)</option>
+              <option value="15" data-i18n="timer15">⏱️ 15 segundos (Rápido)</option>
+              <option value="30" data-i18n="timer30">⏱️ 30 segundos (Tranquilo)</option>
+              <option value="0" data-i18n="timer0">♾️ Sin límite (Manual)</option>
             </select>
           </div>
           <div class="rules-toggle-row">
             <label class="checkbox-label">
               <input type="checkbox" id="chk-two-dice" checked>
-              <span>Jugar con 2 dados clásicos (incluye regla del 9 inicial)</span>
+              <span data-i18n="twoDiceRule">Jugar con 2 dados clásicos (incluye regla del 9 inicial)</span>
             </label>
           </div>
-          <button class="btn btn-primary btn-block" id="btn-create-room">
+          <button class="btn btn-primary btn-block" id="btn-create-room" data-i18n="btnCreateRoom">
             Crear Sala Multijugador 🚀
           </button>
         </div>
@@ -125,15 +126,15 @@
         <!-- Tab Panel: Unirse a Sala -->
         <div class="tab-content" id="panel-join">
           <div class="join-row">
-            <input type="text" id="join-code-input" class="text-input text-code" placeholder="CÓDIGO (ej. OC25)" maxlength="6">
-            <button class="btn btn-primary" id="btn-join-room">Unirse</button>
+            <input type="text" id="join-code-input" class="text-input text-code" placeholder="CÓDIGO (ej. OC25)" data-i18n-ph="joinCodePh" maxlength="6">
+            <button class="btn btn-primary" id="btn-join-room" data-i18n="btnJoinRoom">Unirse</button>
           </div>
         </div>
 
         <!-- Tab Panel: Solitario / Local -->
         <div class="tab-content" id="panel-local">
-          <p class="tab-note">Juega inmediatamente contra oponentes controlados por la computadora (Bots inteligentes).</p>
-          <button class="btn btn-success btn-block" id="btn-quick-solo">
+          <p class="tab-note" data-i18n="tabNote">Juega inmediatamente contra oponentes controlados por la computadora (Bots inteligentes).</p>
+          <button class="btn btn-success btn-block" id="btn-quick-solo" data-i18n="btnQuickSolo">
             ¡Comenzar Partida Solitario vs Bots! 🤖
           </button>
         </div>
@@ -147,23 +148,23 @@
       <div class="waiting-card">
         <div class="waiting-header">
           <div>
-            <span class="badge-status">SALA DE ESPERA</span>
-            <h2 class="waiting-title">Código de Sala: <span id="display-room-code" class="code-highlight">----</span></h2>
+            <span class="badge-status" data-i18n="badgeWaiting">SALA DE ESPERA</span>
+            <h2 class="waiting-title"><span data-i18n="roomCodeLabel">Código de Sala:</span> <span id="display-room-code" class="code-highlight">----</span></h2>
           </div>
-          <button class="btn btn-secondary btn-sm" id="btn-copy-code" title="Copiar enlace de sala">📋 Copiar</button>
+          <button class="btn btn-secondary btn-sm" id="btn-copy-code" title="Copiar enlace de sala" data-i18n="btnCopy">📋 Copiar</button>
         </div>
 
         <!-- QR Code Container -->
         <div class="qr-box">
           <div id="qrcode-container"></div>
-          <span class="qr-hint">Escanea el código QR con tu celular para unirte</span>
+          <span class="qr-hint" data-i18n="qrHint">Escanea el código QR con tu celular para unirte</span>
         </div>
 
         <!-- Connected Players List -->
         <div class="players-list-box">
           <div class="players-list-header">
-            <h3>Jugadores en la Sala (<span id="players-count">1</span>/8)</h3>
-            <button class="btn btn-outline btn-xs" id="btn-add-bot">+ Agregar Bot 🤖</button>
+            <h3><span data-i18n="playersInRoom">Jugadores en la Sala</span> (<span id="players-count">1</span>/8)</h3>
+            <button class="btn btn-outline btn-xs" id="btn-add-bot" data-i18n="btnAddBot">+ Agregar Bot 🤖</button>
           </div>
           <ul id="waiting-players-list" class="waiting-players-list">
             <!-- Rendered dynamically -->
@@ -172,12 +173,12 @@
 
         <!-- Host Actions -->
         <div class="lobby-actions" id="host-controls">
-          <button class="btn btn-success btn-lg btn-block" id="btn-start-game">
+          <button class="btn btn-success btn-lg btn-block" id="btn-start-game" data-i18n="btnStartGame">
             ¡Iniciar Partida Ahora! 🏁
           </button>
         </div>
         <div class="lobby-actions guest-wait-msg hidden" id="guest-controls">
-          <span class="spinner-icon">⏳</span> Esperando a que el anfitrión inicie la partida...
+          <span class="spinner-icon">⏳</span> <span data-i18n="guestWaitMsg">Esperando a que el anfitrión inicie la partida...</span>
         </div>
       </div>
     </section>
@@ -194,23 +195,23 @@
           <div class="turn-bar" id="turn-bar">
             <div class="turn-avatar" id="turn-avatar">🪿</div>
             <div class="turn-info">
-              <span class="turn-label">TURNO ACTUAL</span>
+              <span class="turn-label" data-i18n="turnLabel">TURNO ACTUAL</span>
               <span class="turn-name" id="turn-name">Don Ganso</span>
             </div>
             <button id="btn-turn-timer" class="turn-timer-pill" title="Temporizador de turno (clic anfitrión para alternar)">⏱️ 20s</button>
-            <div class="turn-status-badge" id="turn-status-badge">Esperando tiro...</div>
+            <div class="turn-status-badge" id="turn-status-badge" data-i18n="turnStatusWaiting">Esperando tiro...</div>
           </div>
 
           <!-- Mini Race Radar (Standings Bar) with Camera Mode Toggle -->
           <div class="race-radar-bar" id="race-radar-bar" title="Progreso de la carrera hacia la casilla 63">
-            <span class="radar-label">🏁 Salida</span>
+            <span class="radar-label" data-i18n="radarStart">🏁 Salida</span>
             <div class="radar-track" id="radar-track">
               <div id="radar-runners" class="radar-runners"></div>
             </div>
-            <span class="radar-label">Meta 63 🏆</span>
+            <span class="radar-label" data-i18n="radarGoal">Meta 63 🏆</span>
             <button id="btn-camera-toggle" class="btn-cam-pill" title="Alternar entre Vista Completa y Seguir Jugada">
               <span class="cam-icon" id="cam-icon">🎯</span>
-              <span id="cam-mode-text">Seguir</span>
+              <span id="cam-mode-text" data-i18n="camFollow">Seguir</span>
             </button>
           </div>
 
@@ -276,7 +277,7 @@
 
           <!-- Dice & Action Card with Real 3D Cubes -->
           <div class="action-card">
-            <h3 class="card-title">Tirada de Dados</h3>
+            <h3 class="card-title" data-i18n="diceRollTitle">Tirada de Dados</h3>
             
             <div class="dice-arena">
               <div class="dice-stage" id="dice-container-box" title="Haz clic en los dados o botón para tirar">
@@ -303,17 +304,17 @@
             </div>
 
             <div class="dice-total-display">
-              Total: <span id="dice-total-num" class="dice-total-num">2</span>
+              <span data-i18n="diceTotalLabel">Total:</span> <span id="dice-total-num" class="dice-total-num">2</span>
             </div>
 
-            <button class="btn btn-action btn-block" id="btn-roll-dice">
+            <button class="btn btn-action btn-block" id="btn-roll-dice" data-i18n="btnRollDice">
               🎲 ¡TIRAR DADOS! 🎲
             </button>
           </div>
 
           <!-- Players Tracker & Standings -->
           <div class="players-card">
-            <h3 class="card-title">Posiciones</h3>
+            <h3 class="card-title" data-i18n="standingsTitle">Posiciones</h3>
             <div id="game-players-list" class="game-players-list">
               <!-- Dynamically populated -->
             </div>
@@ -322,8 +323,8 @@
           <!-- Activity Log & Chat -->
           <div class="log-card">
             <div class="log-tabs">
-              <button class="log-tab active" id="tab-log" data-target="content-log">📜 Crónica</button>
-              <button class="log-tab" id="tab-chat" data-target="content-chat">💬 Chat & Porras</button>
+              <button class="log-tab active" id="tab-log" data-target="content-log" data-i18n="tabLog">📜 Crónica</button>
+              <button class="log-tab" id="tab-chat" data-target="content-chat" data-i18n="tabChat">💬 Chat & Porras</button>
             </div>
 
             <div class="log-body active" id="content-log">
@@ -342,8 +343,8 @@
               </div>
 
               <form id="chat-form" class="chat-form">
-                <input type="text" id="chat-input" class="text-input text-sm" placeholder="Escribe un mensaje..." maxlength="120">
-                <button type="submit" class="btn btn-primary btn-sm">Enviar</button>
+                <input type="text" id="chat-input" class="text-input text-sm" placeholder="Escribe un mensaje..." data-i18n-ph="chatInputPh" maxlength="120">
+                <button type="submit" class="btn btn-primary btn-sm" data-i18n="chatSendBtn">Enviar</button>
               </form>
             </div>
           </div>
@@ -363,18 +364,18 @@
   <div id="victory-modal" class="modal-backdrop hidden">
     <div class="modal-card victory-card">
       <div class="victory-trophy">🏆</div>
-      <h2 class="victory-headline">¡TENEMOS UN CAMPEÓN!</h2>
+      <h2 class="victory-headline" data-i18n="victoryHeadline">¡TENEMOS UN CAMPEÓN!</h2>
       <div class="winner-presentation">
         <span class="winner-avatar" id="winner-avatar">🪿</span>
         <h3 class="winner-name" id="winner-name">Don Ganso</h3>
-        <p class="winner-tag">¡Ha conquistado el Gran Jardín de la Oca en la casilla 63!</p>
+        <p class="winner-tag" data-i18n="victoryTag">¡Ha conquistado el Gran Jardín de la Oca en la casilla 63!</p>
       </div>
 
       <div class="modal-actions" id="winner-actions">
-        <button class="btn btn-success btn-lg btn-block" id="btn-restart-game">
+        <button class="btn btn-success btn-lg btn-block" id="btn-restart-game" data-i18n="btnRestart">
           🔄 Jugar Otra Partida
         </button>
-        <button class="btn btn-outline btn-block" id="btn-victory-back-lobby">
+        <button class="btn btn-outline btn-block" id="btn-victory-back-lobby" data-i18n="btnBackLobby">
           🏠 Volver al Menú Principal
         </button>
       </div>
@@ -385,101 +386,101 @@
   <div id="rules-modal" class="modal-backdrop hidden">
     <div class="modal-card rules-card">
       <div class="modal-header">
-        <h2 class="modal-title">📜 Reglas de El Juego de la Oca</h2>
+        <h2 class="modal-title" data-i18n="rulesModalTitle">📜 Reglas de El Juego de la Oca</h2>
         <button class="btn-close" id="btn-close-rules">✕</button>
       </div>
 
       <div class="modal-scrollable-body">
-        <h3>🎯 Objetivo</h3>
-        <p>Ser el primer jugador en llegar con la <strong>tirada exacta</strong> a la casilla 63: <em>El Gran Jardín de la Oca</em>.</p>
+        <h3 data-i18n="rulesObjectiveTitle">🎯 Objetivo</h3>
+        <p data-i18n="rulesObjectiveText">Ser el primer jugador en llegar con la <strong>tirada exacta</strong> a la casilla 63: <em>El Gran Jardín de la Oca</em>.</p>
 
-        <h3>🦆 Las Casillas Especiales</h3>
+        <h3 data-i18n="rulesSpecialTitle">🦆 Las Casillas Especiales</h3>
         <div class="rules-grid">
           <div class="rule-item">
             <span class="rule-icon">🦆</span>
             <div>
-              <strong>Las Ocas (5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59):</strong>
-              <p><em>«De oca a oca y tiro porque me toca»</em>. Saltas a la siguiente oca y vuelves a tirar inmediatamente.</p>
+              <strong data-i18n="ruleOcaTitle">Las Ocas (5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59):</strong>
+              <p data-i18n="ruleOcaText"><em>«De oca a oca y tiro porque me toca»</em>. Saltas a la siguiente oca y vuelves a tirar inmediatamente.</p>
             </div>
           </div>
 
           <div class="rule-item">
             <span class="rule-icon">🌉</span>
             <div>
-              <strong>El Puente (6 y 12):</strong>
-              <p><em>«De puente a puente y tiro porque me lleva la corriente»</em>. Saltas al otro puente y tiras de nuevo.</p>
+              <strong data-i18n="ruleBridgeTitle">El Puente (6 y 12):</strong>
+              <p data-i18n="ruleBridgeText"><em>«De puente a puente y tiro porque me lleva la corriente»</em>. Saltas al otro puente y tiras de nuevo.</p>
             </div>
           </div>
 
           <div class="rule-item">
             <span class="rule-icon">🎲</span>
             <div>
-              <strong>Los Dados (26 y 53):</strong>
-              <p><em>«De dados a dados y tiro porque me ha tocado»</em>. Saltas entre ambas y repites tiro.</p>
+              <strong data-i18n="ruleDiceTitle">Los Dados (26 y 53):</strong>
+              <p data-i18n="ruleDiceText"><em>«De dados a dados y tiro porque me ha tocado»</em>. Saltas entre ambas y repites tiro.</p>
             </div>
           </div>
 
           <div class="rule-item">
             <span class="rule-icon">🏨</span>
             <div>
-              <strong>La Posada (19):</strong>
-              <p>Cansado del viaje, descansas y <strong>pierdes 1 turno</strong>.</p>
+              <strong data-i18n="ruleInnTitle">La Posada (19):</strong>
+              <p data-i18n="ruleInnText">Cansado del viaje, descansas y <strong>pierdes 1 turno</strong>.</p>
             </div>
           </div>
 
           <div class="rule-item">
             <span class="rule-icon">🕳️</span>
             <div>
-              <strong>El Pozo (31):</strong>
-              <p>Quedas atrapado hasta que otro jugador caiga en él para rescatarte (intercambian lugares) o tras pasar 3 turnos.</p>
+              <strong data-i18n="ruleWellTitle">El Pozo (31):</strong>
+              <p data-i18n="ruleWellText">Quedas atrapado hasta que otro jugador caiga en él para rescatarte (intercambian lugares) o tras pasar 3 turnos.</p>
             </div>
           </div>
 
           <div class="rule-item">
             <span class="rule-icon">🌀</span>
             <div>
-              <strong>El Laberinto (42):</strong>
-              <p><em>«Del laberinto al 30»</em>. Te desorientas y retrocedes a la casilla 30.</p>
+              <strong data-i18n="ruleMazeTitle">El Laberinto (42):</strong>
+              <p data-i18n="ruleMazeText"><em>«Del laberinto al 30»</em>. Te desorientas y retrocedes a la casilla 30.</p>
             </div>
           </div>
 
           <div class="rule-item">
             <span class="rule-icon">⛓️</span>
             <div>
-              <strong>La Cárcel (52):</strong>
-              <p>Quedas encerrado y <strong>pierdes 2 turnos</strong>.</p>
+              <strong data-i18n="rulePrisonTitle">La Cárcel (52):</strong>
+              <p data-i18n="rulePrisonText">Quedas encerrado y <strong>pierdes 2 turnos</strong>.</p>
             </div>
           </div>
 
           <div class="rule-item">
             <span class="rule-icon">💀</span>
             <div>
-              <strong>La Muerte (58):</strong>
-              <p>¡El peor castigo! Vuelves al inicio: <strong>casilla 1</strong>.</p>
+              <strong data-i18n="ruleDeathTitle">La Muerte (58):</strong>
+              <p data-i18n="ruleDeathText">¡El peor castigo! Vuelves al inicio: <strong>casilla 1</strong>.</p>
             </div>
           </div>
         </div>
 
-        <h3>🎲 Regla Especial del 9 Inicial</h3>
-        <p>Al iniciar la partida (desde la casilla 0):</p>
+        <h3 data-i18n="rulesNineTitle">🎲 Regla Especial del 9 Inicial</h3>
+        <p data-i18n="rulesNineDesc">Al iniciar la partida (desde la casilla 0):</p>
         <ul>
-          <li>Si sacas 9 con <strong>5 y 4</strong>: Vuelas directo a la <strong>casilla 53</strong> y vuelves a tirar.</li>
-          <li>Si sacas 9 con <strong>6 y 3</strong>: Vuelas directo a la <strong>casilla 26</strong> y vuelves a tirar.</li>
+          <li data-i18n="rulesNine54">Si sacas 9 con <strong>5 y 4</strong>: Vuelas directo a la <strong>casilla 53</strong> y vuelves a tirar.</li>
+          <li data-i18n="rulesNine63">Si sacas 9 con <strong>6 y 3</strong>: Vuelas directo a la <strong>casilla 26</strong> y vuelves a tirar.</li>
         </ul>
 
-        <h3>↩️ Rebote en la Casilla 63</h3>
-        <p>Debes entrar a la casilla 63 con el número exacto. Si te sobran puntos, <strong>rebotas hacia atrás</strong>. Si al rebotar caes en la Muerte o una Oca, ¡se activa su efecto!</p>
+        <h3 data-i18n="rulesReboundTitle">↩️ Rebote en la Casilla 63</h3>
+        <p data-i18n="rulesReboundText">Debes entrar a la casilla 63 con el número exacto. Si te sobran puntos, <strong>rebotas hacia atrás</strong>. Si al rebotar caes en la Muerte o una Oca, ¡se activa su efecto!</p>
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-primary" id="btn-got-rules">¡Entendido, a jugar!</button>
+        <button class="btn btn-primary" id="btn-got-rules" data-i18n="btnGotRules">¡Entendido, a jugar!</button>
       </div>
     </div>
   </div>
 
   <!-- Scripts -->
   <script src="qrcode.min.js"></script>
-  <script src="audio.js"></script>
-  <script src="app.js?v=2.4"></script>
+  <script src="audio.js?v=2.5"></script>
+  <script src="app.js?v=2.5"></script>
 </body>
 </html>
