@@ -1,5 +1,11 @@
 # 🦆 El Juego de la Oca Online 🎲
 
+[![CI/CD Quality Gates](https://github.com/pinguxx/oca/actions/workflows/ci.yml/badge.svg)](https://github.com/pinguxx/oca/actions/workflows/ci.yml)
+[![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange?logo=rust)](https://www.rust-lang.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
+[![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?logo=render)](https://render.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Un juego de mesa tradicional mexicano e hispano desarrollado en **Rust** (con **Axum** y **WebSockets**) y un cliente web interactivo con tablero espiral responsivo en **SVG**.
 
 Forma parte de la colección de juegos tradicionales clásicos junto a **Lotería Mexicana**, **Serpientes y Escaleras** y **La Pirinola (Toma Todo)**.
