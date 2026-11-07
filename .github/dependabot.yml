@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Automated security & dependency updates for GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Automated security & dependency updates for Rust Backend
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
