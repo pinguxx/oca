@@ -64,7 +64,7 @@ body {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 1000;
+  z-index: 1100;
 }
 
 /* ========================================================
@@ -1724,6 +1724,125 @@ body {
 .chat-form {
   display: flex;
   gap: 6px;
+}
+
+/* Reactions Strip Bar under Board */
+.reactions-strip-card {
+  margin-top: 10px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 183, 3, 0.22);
+  border-radius: 12px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.reactions-strip-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.reactions-strip-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.reactions-strip-inner::-webkit-scrollbar {
+  display: none;
+}
+
+.btn-reaction {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  font-size: 1.25rem;
+  padding: 3px 7px;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-reaction:hover {
+  transform: scale(1.22) translateY(-2px);
+  background: rgba(255, 183, 3, 0.25);
+  border-color: var(--color-gold);
+}
+
+.btn-reaction:active {
+  transform: scale(0.9);
+}
+
+/* Floating Reactions Layer over Board */
+.floating-reactions-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 50;
+}
+
+.floating-reaction-item {
+  position: absolute;
+  bottom: 25px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1.5px solid rgba(255, 183, 3, 0.45);
+  border-radius: 24px;
+  padding: 6px 14px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  animation: floatReactionUp 2.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: none;
+}
+
+.floating-reaction-emoji {
+  font-size: 1.8rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+}
+
+.floating-reaction-author {
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@keyframes floatReactionUp {
+  0% {
+    opacity: 0;
+    transform: translateY(35px) scale(0.6) rotate(-8deg);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.15) rotate(4deg);
+  }
+  35% {
+    transform: translateY(-35px) scale(1) rotate(-3deg);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(-110px) scale(0.98) rotate(2deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-185px) scale(0.75) rotate(-6deg);
+  }
 }
 
 /* ========================================================

@@ -247,6 +247,9 @@ enum ClientMessage {
     SendChat {
         text: String,
     },
+    SendReaction {
+        emoji: String,
+    },
     Ping,
 }
 
@@ -691,6 +694,60 @@ pub async fn handle_ws_connection(socket: WebSocket, state: AppState) {
                 }
             }
 
+            ClientMessage::SendReaction { emoji } => {
+                let Some(ref code) = current_room_code else {
+                    continue;
+                };
+                let Some(ref p_id) = current_player_id else {
+                    continue;
+                };
+
+                let clean_emoji = emoji.trim();
+                let allowed = [
+                    "🦆",
+                    "🎲",
+                    "😂",
+                    "😱",
+                    "💀",
+                    "👏",
+                    "🎉",
+                    "🔥",
+                    "❤️",
+                    "👍",
+                    "¡De oca a oca!",
+                    "¡Cuidado con la muerte!",
+                    "¡Al pozo!",
+                    "¡Tira con fe!",
+                    "¡Honk! 🪿",
+                    "¡A la cárcel! ⛓️",
+                    "From goose to goose!",
+                    "Watch out for death!",
+                    "Into the well!",
+                    "Good luck!",
+                    "Honk! 🪿",
+                    "Go to jail! ⛓️",
+                ];
+                if !allowed.contains(&clean_emoji) {
+                    continue;
+                }
+
+                let rooms_guard = state.rooms.read().await;
+                if let Some(room) = rooms_guard.get(code) {
+                    if let Some(player) = room.players.iter().find(|p| &p.id == p_id) {
+                        let reaction_payload = json!({
+                            "type": "reaction",
+                            "player_id": player.id,
+                            "player_name": player.name,
+                            "player_avatar": player.avatar,
+                            "player_color": player.color,
+                            "emoji": clean_emoji
+                        });
+                        drop(rooms_guard);
+                        broadcast_to_room(&state, code, &reaction_payload).await;
+                    }
+                }
+            }
+
             ClientMessage::ToggleTimer { seconds } => {
                 let Some(ref code) = current_room_code else {
                     continue;
@@ -813,4 +870,21 @@ pub fn start_background_maintenance(state: AppState) {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_send_reaction_deserialization() {
+        let json_data = r#"{"action":"send_reaction","emoji":"🦆"}"#;
+        let parsed: Result<ClientMessage, _> = serde_json::from_str(json_data);
+        assert!(parsed.is_ok());
+        if let Ok(ClientMessage::SendReaction { emoji }) = parsed {
+            assert_eq!(emoji, "🦆");
+        } else {
+            panic!("Expected SendReaction variant");
+        }
+    }
 }

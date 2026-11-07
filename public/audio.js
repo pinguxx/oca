@@ -237,6 +237,30 @@ class OcaAudio {
         }
     }
 
+    // Sonido juguetón de burbuja / pop para reacciones en vivo
+    playReactionPop() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(480 + Math.random() * 140, now);
+        osc.frequency.exponentialRampToValueAtTime(900, now + 0.1);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.1);
+    }
+
     // Graznido de Oca característico ("¡HONK! / ¡CUAK!")
     playGooseHonk() {
         if (!this.enabled) return;

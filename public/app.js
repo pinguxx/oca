@@ -52,6 +52,7 @@ const I18N = {
         btnRollDice: '🎲 ¡TIRAR DADOS! 🎲',
         btnRollingDice: '🎲 ¡Tirando...',
         standingsTitle: 'Posiciones',
+        reactionsLabel: 'Reaccionar:',
         tabLog: '📜 Crónica',
         tabChat: '💬 Chat & Porras',
         chatInputPh: 'Escribe un mensaje...',
@@ -144,6 +145,7 @@ const I18N = {
         btnRollDice: '🎲 ROLL DICE! 🎲',
         btnRollingDice: '🎲 Rolling...',
         standingsTitle: 'Standings',
+        reactionsLabel: 'React:',
         tabLog: '📜 Chronicle',
         tabChat: '💬 Chat & Cheer',
         chatInputPh: 'Type a message...',
@@ -1448,6 +1450,13 @@ class OcaGameApp {
                 this.addChatMessage(data.chat);
                 break;
 
+            case 'reaction':
+                this.spawnFloatingReaction(data.emoji, data.player_name, data.player_avatar, data.player_color);
+                if (window.ocaAudio && typeof window.ocaAudio.playReactionPop === 'function') {
+                    window.ocaAudio.playReactionPop();
+                }
+                break;
+
             case 'error':
                 if (data.message && (data.message.includes('no encontrada') || data.message.includes('llena'))) {
                     this.clearSession();
@@ -1567,6 +1576,17 @@ class OcaGameApp {
             this.showRhymeBanner(event.tile_type, event.rhyme);
         }
 
+        // Haptic feedback for landing tile
+        if (event.tile_type === 'oca') {
+            this.vibrate([50, 30, 60]);
+        } else if (event.tile_type === 'puente' || event.tile_type === 'dados') {
+            this.vibrate([40, 20, 40]);
+        } else if (['posada', 'pozo', 'carcel', 'laberinto'].includes(event.tile_type)) {
+            this.vibrate([70, 30, 70]);
+        } else if (event.tile_type === 'muerte') {
+            this.vibrate([120, 40, 160]);
+        }
+
         if (window.ocaAudio) {
             switch (event.tile_type) {
                 case 'oca':
@@ -1614,6 +1634,7 @@ class OcaGameApp {
         if (event.is_win) {
             this.showVictoryModal(event.player_name);
             this.startConfetti();
+            this.vibrate([120, 60, 120, 60, 250]);
             if (window.ocaAudio) {
                 window.ocaAudio.playVictory();
                 window.ocaAudio.speak(
@@ -1988,6 +2009,40 @@ class OcaGameApp {
         item.innerHTML = `<span class="chat-author">${msg.sender_name}:</span> <span class="chat-text">${msg.text}</span>`;
         list.appendChild(item);
         list.scrollTop = list.scrollHeight;
+    }
+
+    sendReaction(emoji) {
+        if (!emoji) return;
+        this.vibrate(25);
+        this.send({ action: 'send_reaction', emoji });
+    }
+
+    spawnFloatingReaction(emoji, senderName, senderAvatar, senderColor) {
+        const layer = document.getElementById('floating-reactions-layer') || document.body;
+        const item = document.createElement('div');
+        item.className = 'floating-reaction-item';
+
+        const leftPct = 12 + Math.random() * 70;
+        item.style.left = `${leftPct}%`;
+
+        const nameLabel = senderName ? `${senderAvatar || ''} ${senderName}` : (senderAvatar || '');
+        item.innerHTML = `
+            <span class="floating-reaction-emoji">${emoji}</span>
+            <span class="floating-reaction-author" style="color: ${senderColor || '#ffffff'}">${nameLabel}</span>
+        `;
+
+        layer.appendChild(item);
+        setTimeout(() => {
+            if (item.parentNode) item.parentNode.removeChild(item);
+        }, 2900);
+    }
+
+    vibrate(pattern) {
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            try {
+                navigator.vibrate(pattern);
+            } catch (e) {}
+        }
     }
 
     showVictoryModal(winnerName) {
@@ -2549,7 +2604,16 @@ class OcaGameApp {
         });
 
         document.getElementById('btn-roll-dice').addEventListener('click', () => {
+            this.vibrate([25, 20, 25]);
             this.send({ action: 'roll_dice' });
+        });
+
+        // Quick Reactions bar buttons
+        document.querySelectorAll('.btn-reaction').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const emoji = e.currentTarget.getAttribute('data-emoji');
+                if (emoji) this.sendReaction(emoji);
+            });
         });
 
         const timerBtn = document.getElementById('btn-turn-timer');
@@ -2587,10 +2651,9 @@ class OcaGameApp {
         document.querySelectorAll('.btn-shout').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const shout = e.currentTarget.getAttribute('data-shout');
-                this.send({
-                    action: 'send_chat',
-                    text: shout
-                });
+                if (shout) {
+                    this.sendReaction(shout);
+                }
             });
         });
 
@@ -2644,10 +2707,12 @@ class OcaGameApp {
             });
         }
         document.getElementById('btn-restart-game').addEventListener('click', () => {
+            this.stopConfetti();
             document.getElementById('victory-modal').classList.add('hidden');
             this.send({ action: 'restart_game' });
         });
         document.getElementById('btn-victory-back-lobby').addEventListener('click', () => {
+            this.stopConfetti();
             this.clearSession();
             window.location.href = window.location.pathname;
         });
@@ -2680,20 +2745,45 @@ class OcaGameApp {
     }
 
     startConfetti() {
-        const colors = ['#e63946', '#ffd166', '#2a9d8f', '#457b9d', '#f15bb5', '#8338ec'];
+        if (!this.confettiCanvas || !this.confettiCtx) return;
+        this.confettiCanvas.width = window.innerWidth;
+        this.confettiCanvas.height = window.innerHeight;
+
+        // Mexican Fiesta traditional palette (papel picado)
+        const colors = [
+            '#10b981', // Verde Bandera
+            '#ffffff', // Blanco
+            '#ef4444', // Rojo Pasión
+            '#f59e0b', // Oro Imperial
+            '#ec4899', // Rosa Mexicano
+            '#d97706', // Cempasúchil / Naranja
+            '#8b5cf6', // Morado Tradicional
+            '#06b6d4'  // Azul Turquesa
+        ];
         this.confettiParticles = [];
 
-        for (let i = 0; i < 150; i++) {
+        // Dual burst cannon from bottom-left, bottom-right and center
+        const count = 180;
+        for (let i = 0; i < count; i++) {
+            const originX = i % 2 === 0
+                ? this.confettiCanvas.width * (0.2 + Math.random() * 0.2)
+                : this.confettiCanvas.width * (0.6 + Math.random() * 0.2);
+
             this.confettiParticles.push({
-                x: Math.random() * this.confettiCanvas.width,
-                y: -Math.random() * this.confettiCanvas.height * 0.5,
-                w: Math.random() * 10 + 6,
+                x: originX,
+                y: this.confettiCanvas.height * 0.45,
+                w: Math.random() * 12 + 7,
                 h: Math.random() * 8 + 4,
                 color: colors[Math.floor(Math.random() * colors.length)],
-                vx: (Math.random() - 0.5) * 4,
-                vy: Math.random() * 4 + 3,
+                vx: (Math.random() - 0.5) * 18,
+                vy: -Math.random() * 15 - 5,
                 angle: Math.random() * 360,
-                vAngle: (Math.random() - 0.5) * 8
+                vAngle: (Math.random() - 0.5) * 14,
+                wobble: Math.random() * 10,
+                wobbleSpeed: Math.random() * 0.1 + 0.05,
+                gravity: 0.32,
+                alpha: 1,
+                decay: 0.0035 + Math.random() * 0.003
             });
         }
 
@@ -2701,31 +2791,46 @@ class OcaGameApp {
             this.confettiCtx.clearRect(0, 0, this.confettiCanvas.width, this.confettiCanvas.height);
             let activeCount = 0;
 
-            this.confettiParticles.forEach(p => {
-                p.x += p.vx;
+            for (let i = 0; i < this.confettiParticles.length; i++) {
+                const p = this.confettiParticles[i];
+                p.vy += p.gravity;
+                p.x += p.vx + Math.sin(p.wobble) * 2;
                 p.y += p.vy;
                 p.angle += p.vAngle;
+                p.wobble += p.wobbleSpeed;
+                p.alpha -= p.decay;
 
-                if (p.y < this.confettiCanvas.height) {
+                if (p.alpha > 0 && p.y < this.confettiCanvas.height + 50) {
                     activeCount++;
                     this.confettiCtx.save();
+                    this.confettiCtx.globalAlpha = Math.max(0, p.alpha);
                     this.confettiCtx.translate(p.x, p.y);
                     this.confettiCtx.rotate((p.angle * Math.PI) / 180);
                     this.confettiCtx.fillStyle = p.color;
                     this.confettiCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
                     this.confettiCtx.restore();
                 }
-            });
+            }
 
             if (activeCount > 0) {
                 this.confettiAnimId = requestAnimationFrame(render);
             } else {
-                this.confettiCtx.clearRect(0, 0, this.confettiCanvas.width, this.confettiCanvas.height);
+                this.stopConfetti();
             }
         };
 
         if (this.confettiAnimId) cancelAnimationFrame(this.confettiAnimId);
         this.confettiAnimId = requestAnimationFrame(render);
+    }
+
+    stopConfetti() {
+        if (this.confettiAnimId) {
+            cancelAnimationFrame(this.confettiAnimId);
+            this.confettiAnimId = null;
+        }
+        if (this.confettiCanvas && this.confettiCtx) {
+            this.confettiCtx.clearRect(0, 0, this.confettiCanvas.width, this.confettiCanvas.height);
+        }
     }
 }
 
