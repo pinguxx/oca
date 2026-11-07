@@ -1,12 +1,26 @@
 // ========================================================
-// 🦆 Sintetizador de Efectos de Sonido con WebAudio API
-// No requiere archivos de audio externos (cero dependencias)
+// 🦆 Sintetizador de Efectos de Sonido y Locución de Voz
+// Web Audio API + SpeechSynthesis API (Cero dependencias)
 // ========================================================
 
 class OcaAudio {
     constructor() {
         this.ctx = null;
         this.enabled = true;
+        this.currentLang = localStorage.getItem('oca_lang') || 'es';
+        this.spanishVoice = null;
+        this.englishVoice = null;
+
+        // Cargar voces del sintetizador de voz del navegador
+        if ('speechSynthesis' in window) {
+            const loadVoices = () => {
+                const voices = window.speechSynthesis.getVoices();
+                this.spanishVoice = voices.find(v => v.lang.startsWith('es') || v.lang.includes('MX') || v.lang.includes('ES')) || null;
+                this.englishVoice = voices.find(v => v.lang.startsWith('en') || v.lang.includes('US') || v.lang.includes('GB')) || null;
+            };
+            loadVoices();
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
     }
 
     init() {
@@ -21,9 +35,37 @@ class OcaAudio {
         }
     }
 
+    setLanguage(lang) {
+        this.currentLang = lang;
+    }
+
     toggleMute() {
         this.enabled = !this.enabled;
+        if (!this.enabled && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
         return this.enabled;
+    }
+
+    // Locución de voz para grandes eventos (Web Speech API)
+    speak(textEs, textEn) {
+        if (!this.enabled || !('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel(); // Detener locución previa
+
+        const text = (this.currentLang === 'en') ? textEn : textEs;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.05;
+        utterance.pitch = 1.05;
+
+        if (this.currentLang === 'en') {
+            utterance.lang = 'en-US';
+            if (this.englishVoice) utterance.voice = this.englishVoice;
+        } else {
+            utterance.lang = 'es-MX';
+            if (this.spanishVoice) utterance.voice = this.spanishVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
     }
 
     // Sonido al tirar los dados (ruido filtrado y rebotes)
