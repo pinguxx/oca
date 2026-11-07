@@ -365,17 +365,55 @@
     <div class="modal-card victory-card">
       <div class="victory-trophy">🏆</div>
       <h2 class="victory-headline" data-i18n="victoryHeadline">¡TENEMOS UN CAMPEÓN!</h2>
+
       <div class="winner-presentation">
         <span class="winner-avatar" id="winner-avatar">🪿</span>
         <h3 class="winner-name" id="winner-name">Don Ganso</h3>
         <p class="winner-tag" data-i18n="victoryTag">¡Ha conquistado el Gran Jardín de la Oca en la casilla 63!</p>
       </div>
 
-      <div class="modal-actions" id="winner-actions">
-        <button class="btn btn-success btn-lg btn-block" id="btn-restart-game" data-i18n="btnRestart">
+      <!-- Winner Match Stats -->
+      <div class="winner-stats-row" id="winner-stats-row">
+        <div class="winner-stat-pill">
+          <span class="stat-icon">🎲</span>
+          <span class="stat-value" id="winner-stat-rolls">0</span>
+          <span class="stat-label" data-i18n="statRolls">Tiros</span>
+        </div>
+        <div class="winner-stat-pill">
+          <span class="stat-icon">🪿</span>
+          <span class="stat-value" id="winner-stat-geese">0</span>
+          <span class="stat-label" data-i18n="statGeese">Ocas</span>
+        </div>
+        <div class="winner-stat-pill">
+          <span class="stat-icon">🌉</span>
+          <span class="stat-value" id="winner-stat-bridges">0</span>
+          <span class="stat-label" data-i18n="statBridges">Puentes</span>
+        </div>
+      </div>
+
+      <!-- Podium of Honor (Top 3 Players) -->
+      <div class="victory-section">
+        <h4 class="victory-section-title" data-i18n="podiumTitle">🏆 Podio de Honor</h4>
+        <div id="victory-podium" class="podium-row"></div>
+      </div>
+
+      <!-- Medals and Awards / Prizes Grid -->
+      <div class="victory-section">
+        <h4 class="victory-section-title" data-i18n="awardsTitle">🎖️ Medallas y Reconocimientos del Tablero</h4>
+        <div id="victory-awards" class="awards-grid"></div>
+      </div>
+
+      <!-- Hidden Canvas for Trophy Card -->
+      <canvas id="victory-canvas" width="800" height="1000" class="hidden"></canvas>
+
+      <div class="modal-actions victory-actions-grid" id="winner-actions">
+        <button class="btn btn-share-victory btn-lg" id="btn-share-victory" data-i18n="btnShareVictory">
+          📸 Compartir Victoria
+        </button>
+        <button class="btn btn-success btn-lg" id="btn-restart-game" data-i18n="btnRestart">
           🔄 Jugar Otra Partida
         </button>
-        <button class="btn btn-outline btn-block" id="btn-victory-back-lobby" data-i18n="btnBackLobby">
+        <button class="btn btn-outline" id="btn-victory-back-lobby" data-i18n="btnBackLobby">
           🏠 Volver al Menú Principal
         </button>
       </div>

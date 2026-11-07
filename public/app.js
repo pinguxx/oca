@@ -58,6 +58,14 @@ const I18N = {
         chatSendBtn: 'Enviar',
         victoryHeadline: '¡TENEMOS UN CAMPEÓN!',
         victoryTag: '¡Ha conquistado el Gran Jardín de la Oca en la casilla 63!',
+        statRolls: 'Tiros',
+        statGeese: 'Ocas',
+        statBridges: 'Puentes',
+        podiumTitle: '🏆 Podio de Honor',
+        awardsTitle: '🎖️ Medallas y Reconocimientos del Tablero',
+        btnShareVictory: '📸 Compartir Victoria',
+        toastCardShared: '¡Tarjeta de victoria compartida con éxito! 🏆',
+        toastCardDownloaded: '¡Tarjeta de victoria descargada! 🏆',
         btnRestart: '🔄 Jugar Otra Partida',
         btnBackLobby: '🏠 Volver al Menú Principal',
         rulesModalTitle: '📜 Reglas de El Juego de la Oca',
@@ -142,6 +150,14 @@ const I18N = {
         chatSendBtn: 'Send',
         victoryHeadline: 'WE HAVE A CHAMPION!',
         victoryTag: 'Has conquered the Great Garden of the Goose at space 63!',
+        statRolls: 'Rolls',
+        statGeese: 'Geese',
+        statBridges: 'Bridges',
+        podiumTitle: '🏆 Podium of Honor',
+        awardsTitle: '🎖️ Honorary Awards & Medals',
+        btnShareVictory: '📸 Share Victory',
+        toastCardShared: 'Victory card shared successfully! 🏆',
+        toastCardDownloaded: 'Victory card downloaded! 🏆',
         btnRestart: '🔄 Play Again',
         btnBackLobby: '🏠 Return to Main Menu',
         rulesModalTitle: '📜 Game of the Goose Rules',
@@ -1976,8 +1992,443 @@ class OcaGameApp {
 
     showVictoryModal(winnerName) {
         const modal = document.getElementById('victory-modal');
-        document.getElementById('winner-name').textContent = winnerName;
+        if (!modal) return;
+
+        const winnerPlayer = this.room?.players?.find(p => p.name === winnerName)
+            || this.room?.players?.find(p => p.id === this.room.winner_id)
+            || { name: winnerName, avatar: '🪿', position: 63, rolls_count: 0 };
+
+        const winnerAvatarEl = document.getElementById('winner-avatar');
+        if (winnerAvatarEl) winnerAvatarEl.textContent = winnerPlayer.avatar || '🪿';
+
+        const winnerNameEl = document.getElementById('winner-name');
+        if (winnerNameEl) winnerNameEl.textContent = winnerPlayer.name;
+
+        // Calculate Stats for Winner
+        let winnerGeeseCount = 0;
+        let winnerBridgesCount = 0;
+        let winnerRolls = winnerPlayer.rolls_count || 0;
+
+        if (this.room?.history) {
+            this.room.history.forEach(ev => {
+                if (ev.player_name === winnerPlayer.name || ev.player_id === winnerPlayer.id) {
+                    if (ev.tile_type === 'oca') winnerGeeseCount++;
+                    if (ev.tile_type === 'puente') winnerBridgesCount++;
+                }
+            });
+            if (winnerRolls === 0) {
+                winnerRolls = this.room.history.filter(ev => ev.player_name === winnerPlayer.name || ev.player_id === winnerPlayer.id).length || 1;
+            }
+        }
+
+        const statRollsEl = document.getElementById('winner-stat-rolls');
+        if (statRollsEl) statRollsEl.textContent = winnerRolls;
+        const statGeeseEl = document.getElementById('winner-stat-geese');
+        if (statGeeseEl) statGeeseEl.textContent = winnerGeeseCount;
+        const statBridgesEl = document.getElementById('winner-stat-bridges');
+        if (statBridgesEl) statBridgesEl.textContent = winnerBridgesCount;
+
+        // Render Podium of Honor
+        const podiumContainer = document.getElementById('victory-podium');
+        if (podiumContainer && this.room?.players) {
+            podiumContainer.innerHTML = '';
+            const sortedPlayers = [...this.room.players].sort((a, b) => {
+                if (a.id === winnerPlayer.id || a.name === winnerPlayer.name) return -1;
+                if (b.id === winnerPlayer.id || b.name === winnerPlayer.name) return 1;
+                return b.position - a.position;
+            }).slice(0, 3);
+
+            const medals = ['🥇', '🥈', '🥉'];
+            const rankClasses = ['rank-1', 'rank-2', 'rank-3'];
+            sortedPlayers.forEach((p, idx) => {
+                const box = document.createElement('div');
+                box.className = `podium-box ${rankClasses[idx] || ''}`;
+                const posLabel = this.currentLang === 'en' ? `Space ${p.position}` : `Casilla ${p.position}`;
+                box.innerHTML = `
+                    <div class="podium-rank-badge">${medals[idx] || '🏅'}</div>
+                    <div class="podium-avatar">${p.avatar}</div>
+                    <div class="podium-name">${p.name}</div>
+                    <div class="podium-tile">${posLabel}</div>
+                `;
+                podiumContainer.appendChild(box);
+            });
+        }
+
+        // Render Awards and Badges
+        const awardsContainer = document.getElementById('victory-awards');
+        if (awardsContainer && this.room?.players) {
+            awardsContainer.innerHTML = '';
+            const awards = this.calculateMatchAwards(winnerPlayer);
+            awards.forEach(aw => {
+                const card = document.createElement('div');
+                card.className = 'award-badge-card';
+                card.innerHTML = `
+                    <div class="award-badge-icon">${aw.icon}</div>
+                    <div class="award-badge-info">
+                        <div class="award-badge-title">${aw.title}</div>
+                        <div class="award-badge-player">${aw.avatar} ${aw.playerName}</div>
+                        <div class="award-badge-detail">${aw.detail}</div>
+                    </div>
+                `;
+                awardsContainer.appendChild(card);
+            });
+        }
+
+        // Host controls on restart
+        const restartBtn = document.getElementById('btn-restart-game');
+        if (restartBtn) {
+            restartBtn.style.display = this.isHost ? 'flex' : 'none';
+        }
+
         modal.classList.remove('hidden');
+    }
+
+    calculateMatchAwards(winnerPlayer) {
+        if (!this.room || !this.room.players) return [];
+
+        const isEn = this.currentLang === 'en';
+        const awards = [];
+        const players = this.room.players;
+        const history = this.room.history || [];
+
+        // Count per player
+        const playerStats = {};
+        players.forEach(p => {
+            playerStats[p.id] = {
+                player: p,
+                geese: 0,
+                bridges: 0,
+                wells: 0,
+                prisons: 0,
+                deaths: 0,
+                inns: 0,
+                rolls: p.rolls_count || 0
+            };
+        });
+
+        history.forEach(ev => {
+            if (playerStats[ev.player_id]) {
+                const s = playerStats[ev.player_id];
+                if (ev.tile_type === 'oca') s.geese++;
+                else if (ev.tile_type === 'puente') s.bridges++;
+                else if (ev.tile_type === 'pozo') s.wells++;
+                else if (ev.tile_type === 'carcel') s.prisons++;
+                else if (ev.tile_type === 'muerte') s.deaths++;
+                else if (ev.tile_type === 'posada') s.inns++;
+            }
+        });
+
+        // 1. Rey de las Ocas / Goose Master
+        let maxGeeseId = winnerPlayer.id;
+        let maxGeeseCount = 0;
+        Object.entries(playerStats).forEach(([id, s]) => {
+            if (s.geese > maxGeeseCount) {
+                maxGeeseCount = s.geese;
+                maxGeeseId = id;
+            }
+        });
+        const geeseWinner = playerStats[maxGeeseId]?.player || winnerPlayer;
+        awards.push({
+            icon: '🪿',
+            title: isEn ? 'Goose Master' : 'Rey de las Ocas',
+            avatar: geeseWinner.avatar,
+            playerName: geeseWinner.name,
+            detail: isEn
+                ? `Leaped ${Math.max(1, maxGeeseCount)} times from goose to goose`
+                : `Saltó ${Math.max(1, maxGeeseCount)} veces de oca a oca`
+        });
+
+        // 2. Mano Santa / Golden Touch
+        awards.push({
+            icon: '🎲',
+            title: isEn ? 'Golden Touch' : 'Mano Bendita',
+            avatar: winnerPlayer.avatar,
+            playerName: winnerPlayer.name,
+            detail: isEn
+                ? 'Reached tile 63 with great dice precision'
+                : 'Llegó a la casilla 63 con gran destreza en los dados'
+        });
+
+        // 3. Puente o Pozo o Posada
+        let bridgePlayer = Object.values(playerStats).find(s => s.bridges > 0)?.player;
+        let wellPlayer = Object.values(playerStats).find(s => s.wells > 0 || s.player.in_well)?.player;
+        let deathPlayer = Object.values(playerStats).find(s => s.deaths > 0)?.player;
+        let innPlayer = Object.values(playerStats).find(s => s.inns > 0)?.player;
+
+        if (bridgePlayer) {
+            awards.push({
+                icon: '🌉',
+                title: isEn ? 'River Navigator' : 'Navegante del Río',
+                avatar: bridgePlayer.avatar,
+                playerName: bridgePlayer.name,
+                detail: isEn ? 'Carried by the current from bridge to bridge' : 'Llevado por la corriente de puente a puente'
+            });
+        } else if (wellPlayer) {
+            awards.push({
+                icon: '🕳️',
+                title: isEn ? 'Well Survivor' : 'Sobreviviente del Pozo',
+                avatar: wellPlayer.avatar,
+                playerName: wellPlayer.name,
+                detail: isEn ? 'Rescued from the depths of the well' : 'Rescatado de las profundidades del pozo'
+            });
+        } else if (innPlayer) {
+            awards.push({
+                icon: '🏨',
+                title: isEn ? 'Inn Guest' : 'Huésped de Honor',
+                avatar: innPlayer.avatar,
+                playerName: innPlayer.name,
+                detail: isEn ? 'Rested leisurely at the traditional inn' : 'Descansó plácidamente en la posada'
+            });
+        } else {
+            const runnerUp = players.filter(p => p.id !== winnerPlayer.id).sort((a,b) => b.position - a.position)[0] || winnerPlayer;
+            awards.push({
+                icon: '🧭',
+                title: isEn ? 'Bold Explorer' : 'Explorador Audaz',
+                avatar: runnerUp.avatar,
+                playerName: runnerUp.name,
+                detail: isEn ? `Navigated to space ${runnerUp.position} in the spiral` : `Avanzó hasta la casilla ${runnerUp.position} en la espiral`
+            });
+        }
+
+        // 4. El Fénix o Tiro Maestro
+        if (deathPlayer) {
+            awards.push({
+                icon: '💀',
+                title: isEn ? 'The Phoenix' : 'Fénix Renacido',
+                avatar: deathPlayer.avatar,
+                playerName: deathPlayer.name,
+                detail: isEn ? 'Survived death and rejoined the race' : 'Burló a la muerte y continuó la carrera'
+            });
+        } else {
+            awards.push({
+                icon: '🎯',
+                title: isEn ? 'Bullseye Finisher' : 'Tiro de Precisión',
+                avatar: winnerPlayer.avatar,
+                playerName: winnerPlayer.name,
+                detail: isEn ? 'Landed exact count on tile 63 without excess bounce' : 'Entró a la meta 63 con la tirada exacta'
+            });
+        }
+
+        return awards;
+    }
+
+    async generateAndShareVictoryCard() {
+        if (!this.room) return;
+
+        const winnerPlayer = this.room?.players?.find(p => p.id === this.room.winner_id)
+            || this.room?.players?.find(p => p.position === 63)
+            || this.room?.players?.[0]
+            || { name: 'Campeón', avatar: '🪿', position: 63 };
+
+        const canvas = document.getElementById('victory-canvas') || document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 1000;
+        const ctx = canvas.getContext('2d');
+        const isEn = this.currentLang === 'en';
+
+        // 1. Elegant Parchment / Cardstock Base (matching Montecarlo vintage board)
+        const bgGrad = ctx.createLinearGradient(0, 0, 800, 1000);
+        bgGrad.addColorStop(0, '#ffffff');
+        bgGrad.addColorStop(0.5, '#fffef8');
+        bgGrad.addColorStop(1, '#fbf2db');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, 800, 1000);
+
+        // Ornate Outer Double Border (Mexican Burgundy & Rich Gold)
+        ctx.strokeStyle = '#9e2a2b';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(20, 20, 760, 960);
+
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(32, 32, 736, 936);
+
+        // Decorative Rosette Corner Stars
+        ctx.fillStyle = '#9e2a2b';
+        ctx.font = 'bold 24px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✦', 50, 60);
+        ctx.fillText('✦', 750, 60);
+        ctx.fillText('✦', 50, 945);
+        ctx.fillText('✦', 750, 945);
+
+        // Header Banner Box
+        ctx.fillStyle = '#9e2a2b';
+        ctx.fillRect(140, 60, 520, 50);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = "900 28px 'Playfair Display', Georgia, serif";
+        ctx.letterSpacing = '1px';
+        ctx.fillText('🦆 EL JUEGO DE LA OCA 🎲', 400, 95);
+
+        // Subtitle
+        ctx.fillStyle = '#b45309';
+        ctx.font = "700 15px 'Outfit', sans-serif";
+        ctx.fillText(isEn ? 'OFFICIAL TABLETOP VICTORY CERTIFICATE' : 'CERTIFICADO OFICIAL DE VICTORIA', 400, 140);
+
+        // Laurel Circle & Winner Avatar
+        ctx.beginPath();
+        ctx.arc(400, 235, 65, 0, Math.PI * 2);
+        ctx.fillStyle = '#fef3c7';
+        ctx.fill();
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.font = '64px sans-serif';
+        ctx.fillText(winnerPlayer.avatar || '🪿', 400, 258);
+
+        // Winner Name
+        ctx.fillStyle = '#1e293b';
+        ctx.font = "900 36px 'Playfair Display', Georgia, serif";
+        ctx.fillText(winnerPlayer.name, 400, 340);
+
+        // Champion Tag
+        ctx.fillStyle = '#9e2a2b';
+        ctx.font = "800 18px 'Outfit', sans-serif";
+        ctx.fillText(
+            isEn ? '🏆 Grand Champion of the Goose Garden (Space 63)!' : '🏆 ¡Gran Campeón del Jardín de la Oca (Casilla 63)!',
+            400,
+            372
+        );
+
+        // Stats Boxes
+        let geeseCount = 0;
+        let bridgesCount = 0;
+        let rollsCount = winnerPlayer.rolls_count || 0;
+        if (this.room?.history) {
+            this.room.history.forEach(ev => {
+                if (ev.player_name === winnerPlayer.name || ev.player_id === winnerPlayer.id) {
+                    if (ev.tile_type === 'oca') geeseCount++;
+                    if (ev.tile_type === 'puente') bridgesCount++;
+                }
+            });
+            if (rollsCount === 0) {
+                rollsCount = this.room.history.filter(ev => ev.player_name === winnerPlayer.name || ev.player_id === winnerPlayer.id).length || 1;
+            }
+        }
+
+        const statBoxes = [
+            { icon: '🎲', val: rollsCount, label: isEn ? 'Rolls' : 'Tiros' },
+            { icon: '🪿', val: geeseCount, label: isEn ? 'Geese' : 'Ocas' },
+            { icon: '🌉', val: bridgesCount, label: isEn ? 'Bridges' : 'Puentes' }
+        ];
+
+        for (let i = 0; i < 3; i++) {
+            const bx = 160 + i * 170;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(bx, 400, 140, 75);
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(bx, 400, 140, 75);
+
+            ctx.fillStyle = '#9e2a2b';
+            ctx.font = "900 24px 'Outfit', sans-serif";
+            ctx.fillText(`${statBoxes[i].icon} ${statBoxes[i].val}`, bx + 70, 436);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = "700 13px 'Outfit', sans-serif";
+            ctx.fillText(statBoxes[i].label, bx + 70, 460);
+        }
+
+        // Podium Section
+        ctx.fillStyle = '#9e2a2b';
+        ctx.font = "800 18px 'Outfit', sans-serif";
+        ctx.fillText(isEn ? '🏆 PODIUM OF HONOR' : '🏆 PODIO DE HONOR', 400, 510);
+
+        const sortedPlayers = [...this.room.players].sort((a, b) => {
+            if (a.id === winnerPlayer.id || a.name === winnerPlayer.name) return -1;
+            if (b.id === winnerPlayer.id || b.name === winnerPlayer.name) return 1;
+            return b.position - a.position;
+        }).slice(0, 3);
+
+        const medals = ['🥇', '🥈', '🥉'];
+        const pWidth = 180;
+        const startPx = 400 - (sortedPlayers.length * pWidth) / 2;
+        sortedPlayers.forEach((p, idx) => {
+            const px = startPx + idx * pWidth + 10;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(px, 530, pWidth - 20, 95);
+            ctx.strokeStyle = idx === 0 ? '#d4af37' : '#cbd5e1';
+            ctx.lineWidth = idx === 0 ? 2.5 : 1.5;
+            ctx.strokeRect(px, 530, pWidth - 20, 95);
+
+            ctx.font = '24px sans-serif';
+            ctx.fillText(`${medals[idx]} ${p.avatar}`, px + (pWidth - 20) / 2, 562);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.font = "700 15px 'Outfit', sans-serif";
+            ctx.fillText(p.name, px + (pWidth - 20) / 2, 588);
+
+            ctx.fillStyle = '#b45309';
+            ctx.font = "600 13px 'Outfit', sans-serif";
+            ctx.fillText(isEn ? `Space ${p.position}` : `Casilla ${p.position}`, px + (pWidth - 20) / 2, 610);
+        });
+
+        // Awards Section
+        ctx.fillStyle = '#9e2a2b';
+        ctx.font = "800 18px 'Outfit', sans-serif";
+        ctx.fillText(isEn ? '🎖️ HONORARY MEDALS & AWARDS' : '🎖️ MEDALLAS Y RECONOCIMIENTOS', 400, 665);
+
+        const awards = this.calculateMatchAwards(winnerPlayer);
+        awards.slice(0, 3).forEach((aw, idx) => {
+            const ay = 690 + idx * 72;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(100, ay, 600, 60);
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(100, ay, 600, 60);
+
+            ctx.font = '28px sans-serif';
+            ctx.fillText(aw.icon, 140, ay + 42);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#9e2a2b';
+            ctx.font = "800 15px 'Outfit', sans-serif";
+            ctx.fillText(aw.title, 180, ay + 26);
+
+            ctx.fillStyle = '#334155';
+            ctx.font = "600 13px 'Outfit', sans-serif";
+            ctx.fillText(`${aw.avatar} ${aw.playerName} • ${aw.detail}`, 180, ay + 48);
+            ctx.textAlign = 'center';
+        });
+
+        // Footer info
+        ctx.fillStyle = '#78716c';
+        ctx.font = "14px 'Outfit', sans-serif";
+        const dateStr = new Date().toLocaleDateString();
+        ctx.fillText(`Sala: ${this.room.code} • ${dateStr} • ¡De oca a oca y tiro porque me toca! 🎲`, 400, 930);
+
+        // Export and Native Web Share / Download
+        canvas.toBlob(async (blob) => {
+            if (!blob) return;
+            const filename = `victoria-juego-de-la-oca-${this.room.code}.png`;
+            const file = new File([blob], filename, { type: 'image/png' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        title: isEn ? '🦆 Great Game of the Goose Champion!' : '🦆 ¡Campeón de El Juego de la Oca!',
+                        text: isEn
+                            ? `¡${winnerPlayer.name} has conquered the Goose Garden at space 63! 🦆🏆🎲`
+                            : `¡${winnerPlayer.name} conquistó el Gran Jardín de la Oca en la casilla 63! 🦆🏆🎲`,
+                        files: [file]
+                    });
+                    this.showToast(isEn ? 'Victory card shared successfully! 🏆' : '¡Tarjeta de victoria compartida con éxito! 🏆');
+                    return;
+                } catch (err) {
+                    if (err.name !== 'AbortError') console.warn('Share error, falling back to download', err);
+                }
+            }
+
+            // Fallback download
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            this.showToast(isEn ? 'Victory card downloaded! 🏆' : '¡Tarjeta de victoria descargada! 🏆');
+        }, 'image/png');
     }
 
     requirePlayerName() {
@@ -2186,6 +2637,12 @@ class OcaGameApp {
             }
         });
 
+        const btnShare = document.getElementById('btn-share-victory');
+        if (btnShare) {
+            btnShare.addEventListener('click', () => {
+                this.generateAndShareVictoryCard();
+            });
+        }
         document.getElementById('btn-restart-game').addEventListener('click', () => {
             document.getElementById('victory-modal').classList.add('hidden');
             this.send({ action: 'restart_game' });
