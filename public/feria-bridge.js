@@ -17,10 +17,17 @@
   // 1. Extraer parámetros de URL
   const urlParams = new URLSearchParams(window.location.search);
   const passId = urlParams.get('pass') || '';
-  const playerName = urlParams.get('player') || '';
+  const playerName = urlParams.get('player') || urlParams.get('name') || urlParams.get('nickname') || urlParams.get('nick') || '';
   const playerAvatar = urlParams.get('avatar') || '🤼';
   const hubUrl = urlParams.get('hub') || DEFAULT_HUB_URL;
-  const isFromFeria = Boolean(urlParams.get('hub') || urlParams.get('pass'));
+  const isFromFeria = Boolean(
+    urlParams.get('hub') || 
+    urlParams.get('pass') || 
+    urlParams.get('feria') || 
+    urlParams.get('player') || 
+    urlParams.get('name') || 
+    urlParams.get('nickname')
+  );
 
   // 2. Helper de escape HTML
   function escapeHtml(str) {
@@ -219,13 +226,22 @@
       'canicas_name',
       'pirinola_name',
       'rayuela_player_name',
+      'rayuela_name',
       'basta_player_name',
+      'basta_name',
       'loteria_player_name',
+      'loteria_name',
       'conquian_player_name',
+      'conquian_name',
       'oca_player_name',
+      'oca_name',
       'shoots_player_name',
+      'serpientes_player_name',
+      'feria_player_name',
       'player_name',
-      'playerName'
+      'playerName',
+      'username',
+      'nickname'
     ];
     nameKeys.forEach(k => {
       try {
@@ -237,6 +253,29 @@
       } catch (_) {}
     });
 
+    // Limpiar o actualizar sesiones compuestas si pertenecían a un usuario anterior
+    try {
+      const conquianRaw = localStorage.getItem('conquian_session');
+      if (conquianRaw) {
+        const cs = JSON.parse(conquianRaw);
+        if (cs && cs.playerName && cs.playerName !== playerName) {
+          localStorage.removeItem('conquian_session');
+          const banner = document.getElementById('resume-banner');
+          if (banner) banner.style.display = 'none';
+        }
+      }
+    } catch (_) {}
+
+    try {
+      const ocaRaw = localStorage.getItem('oca_session');
+      if (ocaRaw) {
+        const os = JSON.parse(ocaRaw);
+        if (os && os.playerName && os.playerName !== playerName) {
+          localStorage.removeItem('oca_session');
+        }
+      }
+    } catch (_) {}
+
     if (playerAvatar) {
       const avatarKeys = [
         'canicas_avatar',
@@ -246,7 +285,10 @@
         'loteria_avatar',
         'conquian_avatar',
         'oca_avatar',
-        'shoots_avatar'
+        'shoots_avatar',
+        'serpientes_avatar',
+        'player_avatar',
+        'avatar'
       ];
       avatarKeys.forEach(k => {
         try {
@@ -272,6 +314,9 @@
     syncPlayerStorage();
 
     const selectors = [
+      '#create-name',
+      '#join-name',
+      '#player-name-input',
       '#input-name',
       '#input-player-name',
       '#playerName',
@@ -283,27 +328,66 @@
       'input[name="playerName"]',
       'input[name="player_name"]',
       'input[name="nickname"]',
-      'input[name="name"]'
+      'input[name="name"]',
+      'input[name="create-name"]',
+      'input[name="join-name"]',
+      'input[autocomplete="nickname"]'
     ];
 
-    for (const sel of selectors) {
-      const el = document.querySelector(sel);
-      if (el) {
-        // Actualizar siempre el valor cuando el usuario viene de La Feria
-        if (el.value !== playerName) {
-          el.value = playerName;
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        break;
-      }
-    }
+    const filledElements = new Set();
 
+    selectors.forEach(sel => {
+      try {
+        const matches = document.querySelectorAll(sel);
+        matches.forEach(el => {
+          if (el && !filledElements.has(el)) {
+            filledElements.add(el);
+            if (el.value !== playerName) {
+              el.value = playerName;
+              el.setAttribute('value', playerName);
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          }
+        });
+      } catch (_) {}
+    });
+
+    // Escanear inputs de texto adicionales que correspondan al apodo
+    try {
+      const allTextInputs = document.querySelectorAll('input[type="text"], input:not([type])');
+      allTextInputs.forEach(el => {
+        if (filledElements.has(el) || el.readOnly || el.disabled) return;
+        const id = (el.id || '').toLowerCase();
+        const name = (el.name || '').toLowerCase();
+        const placeholder = (el.placeholder || '').toLowerCase();
+        const isNameField = id.includes('name') || id.includes('player') || id.includes('nick') ||
+                            name.includes('name') || name.includes('player') || name.includes('nick') ||
+                            placeholder.includes('apodo') || placeholder.includes('nombre') || placeholder.includes('nickname');
+        const isBlacklisted = id.includes('room') || id.includes('code') || id.includes('chat') || id.includes('share') || id.includes('search') ||
+                              name.includes('room') || name.includes('code') || name.includes('chat') || name.includes('share') || name.includes('search');
+        if (isNameField && !isBlacklisted) {
+          filledElements.add(el);
+          if (el.value !== playerName) {
+            el.value = playerName;
+            el.setAttribute('value', playerName);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      });
+    } catch (_) {}
+
+    // Selección de avatar
     if (playerAvatar) {
       try {
-        const pickerItems = document.querySelectorAll('.picker-item, .avatar-option, .avatar-btn, [data-avatar]');
+        const pickerItems = document.querySelectorAll(
+          '.picker-item, .avatar-option, .avatar-btn, .avatar-choice, .avatar-opt, [data-avatar], #avatar-picker button, #avatar-grid button, #avatar-selector button, .avatar-selector div'
+        );
         for (const btn of pickerItems) {
-          if (btn.textContent && (btn.textContent.trim() === playerAvatar || btn.textContent.includes(playerAvatar))) {
+          const dataAv = btn.getAttribute('data-avatar');
+          const txt = (btn.textContent || '').trim();
+          if (dataAv === playerAvatar || txt === playerAvatar || txt.includes(playerAvatar)) {
             btn.click();
             break;
           }
